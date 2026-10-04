@@ -529,7 +529,7 @@ button:active:not(:disabled) { transform: scale(.985); }
 .briefing-steps article { background: #faf6f7; }
 
 @keyframes portal-arrive { from { opacity: 0; transform: translateY(11px) scale(.992); } to { opacity: 1; transform: translateY(0) scale(1); } }
-@keyframes hotspot-drop { from { opacity: 0; transform: translate(-50%,calc(-50% + 13px)) scale(.74) rotate(-8deg); } to { opacity: 1; transform: translate(-50%,-50%) scale(1) rotate(var(--node-tilt,0deg)); } }
+@keyframes hotspot-drop { from { opacity: 0; translate: 0 13px; scale: .74; } to { opacity: 1; translate: 0 0; scale: 1; } }
 @keyframes hotspot-bloom { 50% { transform: scale(1.13); box-shadow: 0 0 15px rgba(228,170,190,.44); } }
 @keyframes thread-glint { 0%,100% { opacity: .67; } 50% { opacity: 1; filter: drop-shadow(0 0 8px rgba(255,93,123,.85)); } }
 @keyframes star-core { 50% { box-shadow: 0 0 42px rgba(112,219,230,.7),inset 0 0 18px rgba(172,243,245,.31); } }
@@ -724,7 +724,7 @@ button:active:not(:disabled) { transform: scale(.985); }
 .briefing-scene-top > span:last-child { flex: none; padding: 6px 9px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(23,16,23,.31); color: #fff !important; text-shadow: 0 1px 7px rgba(0,0,0,.6); white-space: nowrap; }
 .briefing-scene-paper .briefing-scene-top,
 .briefing-scene-paper .briefing-scene-top > span:last-child { color: #63493c; text-shadow: none; }
-.briefing-scene-paper .briefing-scene-top > span:last-child { border-color: rgba(107,77,59,.2); background: rgba(255,247,231,.78); }
+.briefing-scene-paper .briefing-scene-top > span:last-child { border-color: rgba(107,77,59,.2); background: rgba(255,247,231,.78); color: #63493c !important; text-shadow: none !important; }
 .briefing-preview { grid-template-columns: 35px minmax(0,1fr) auto; width: min(455px,calc(100% - 46px)); min-height: 67px; }
 .briefing-preview > div { min-width: 0; }
 .briefing-enter-button { display: inline-flex; flex: none; align-items: center; justify-content: center; gap: 6px; min-height: 39px; border: 1px solid rgba(255,255,255,.25); border-radius: 999px; padding: 0 12px; color: #fff8f5; background: #b64763; box-shadow: 0 5px 15px rgba(0,0,0,.2); font-size: 11px; font-weight: 800; white-space: nowrap; cursor: pointer; transition: transform .18s, filter .18s, box-shadow .18s; }
