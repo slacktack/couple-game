@@ -43,6 +43,7 @@ export default function Observatory({ data, update, onBack, onLibrary, onPlayerR
       objective="Open five locks, collect the archive answers, and reveal what the observatory has been protecting. One person has the clue for each lock; the last lock is solved together."
       whatYouNeed="This page, a place to write five answers, and a calculator only if you like. The clock is just atmosphere."
       selectedRole={state.introRole || 'A'}
+      audioSrc="/audio/rules/observatory.mp3"
       onSelectRole={role => patch({ introRole: role })}
       roles={{
         A: { name: 'Him · Player A', summary: 'Read his Navigator notes for Locks 01 and 03. Keep the answers on the shared strip.' },

@@ -220,6 +220,7 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
       objective="Work through six short chapters together. Each one earns letters or clues for the next. Put your collected letters into the final vault and open the shared ending."
       whatYouNeed="A video call, paper and pen, a phone for sending photos, and a drink. No advance prep."
       selectedRole={state.introRole || 'A'}
+      audioSrc="/audio/rules/protocol.mp3"
       onSelectRole={role => patch({ introRole: role })}
       roles={{
         A: { name: 'Him · Player A', summary: 'Read his private clue book. In Split Key, he starts with his own secret word list.' },

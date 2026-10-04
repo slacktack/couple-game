@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpenText, Check, Lightbulb, LockKey, Moon, Sparkle, SpeakerHigh, Stop, Sun, Timer } from '@phosphor-icons/react';
 
 export function Button({ children, onClick, kind = 'dark', disabled = false, type = 'button', className = '' }) {
@@ -13,25 +13,38 @@ export function ThemeToggle({ theme, onToggle }) {
   </button>;
 }
 
-export function ReadTextButton({ text, className = '', label = 'Listen to this' }) {
+export function ReadTextButton({ text, audioSrc, className = '', label = 'Listen to this' }) {
   const [playing, setPlaying] = useState(false);
-  useEffect(() => () => { if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }, []);
+  const audioRef = useRef(null);
+  useEffect(() => () => { audioRef.current?.pause(); if ('speechSynthesis' in window) window.speechSynthesis.cancel(); }, []);
   const toggle = () => {
-    if (!('speechSynthesis' in window)) return;
-    if (playing) { window.speechSynthesis.cancel(); setPlaying(false); return; }
+    if (playing) { audioRef.current?.pause(); audioRef.current = null; if ('speechSynthesis' in window) window.speechSynthesis.cancel(); setPlaying(false); return; }
     const currentText = typeof text === 'function' ? text() : text;
-    const utterance = new SpeechSynthesisUtterance(currentText || 'There is no text to read on this screen.');
-    utterance.rate = 0.88;
-    utterance.pitch = 0.98;
-    const voices = window.speechSynthesis.getVoices();
-    utterance.voice = voices.find(voice => /^en(-|_)/i.test(voice.lang) && /natural|samantha|serena|aria|google us|daniel/i.test(voice.name))
-      || voices.find(voice => /^en(-|_)/i.test(voice.lang))
-      || null;
-    utterance.onend = () => setPlaying(false);
-    utterance.onerror = () => setPlaying(false);
-    window.speechSynthesis.cancel();
-    window.speechSynthesis.speak(utterance);
-    setPlaying(true);
+    const readWithBrowserVoice = () => {
+      if (!('speechSynthesis' in window)) { setPlaying(false); return; }
+      const utterance = new SpeechSynthesisUtterance(currentText || 'There is no text to read on this screen.');
+      utterance.rate = 0.88;
+      utterance.pitch = 0.98;
+      const voices = window.speechSynthesis.getVoices();
+      utterance.voice = voices.find(voice => /^en(-|_)/i.test(voice.lang) && /natural|samantha|serena|aria|google us|daniel/i.test(voice.name))
+        || voices.find(voice => /^en(-|_)/i.test(voice.lang))
+        || null;
+      utterance.onend = () => setPlaying(false);
+      utterance.onerror = () => setPlaying(false);
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utterance);
+      setPlaying(true);
+    };
+    if (audioSrc) {
+      if ('speechSynthesis' in window) window.speechSynthesis.cancel();
+      const audio = new Audio(audioSrc);
+      audioRef.current = audio;
+      audio.onended = () => { audioRef.current = null; setPlaying(false); };
+      audio.onerror = () => { audioRef.current = null; readWithBrowserVoice(); };
+      audio.play().then(() => setPlaying(true)).catch(readWithBrowserVoice);
+      return;
+    }
+    readWithBrowserVoice();
   };
   return <button type="button" className={`read-text-button ${className}`} onClick={toggle} aria-pressed={playing}>
     {playing ? <Stop size={17} weight="fill" /> : <SpeakerHigh size={18} weight="duotone" />}
@@ -117,7 +130,7 @@ export function CheckpointFooter({ completed = false, letter, onComplete, disabl
 
 export function GameInstructions({
   number, name, subtitle, time, objective, whatYouNeed, steps, rulebook, roles,
-  selectedRole, onSelectRole, onStart, onReadRulebook, onReadPlayerRoute,
+  selectedRole, onSelectRole, onStart, onReadRulebook, onReadPlayerRoute, audioSrc,
 }) {
   const selected = roles[selectedRole || 'A'];
   const spokenRules = [name, subtitle, `What this game is about: ${objective}`, `What you need: ${whatYouNeed}`,
@@ -130,7 +143,7 @@ export function GameInstructions({
       <span className="micro-label">{number} · before you play</span>
       <h2>Here’s the whole game<br /><em>in plain English.</em></h2>
       <p>{objective}</p>
-      <div className="instructions-hero-actions"><span className="instructions-time"><Timer size={16} /> About {time} <i /> Pause whenever you want</span><ReadTextButton text={spokenRules} label="Listen to the rules" /></div>
+      <div className="instructions-hero-actions"><span className="instructions-time"><Timer size={16} /> About {time} <i /> Pause whenever you want</span><ReadTextButton text={spokenRules} audioSrc={audioSrc} label="Listen to the rules" /></div>
     </header>
     <div className="instructions-facts">
       <article><span className="micro-label">What you’re doing</span><p>{objective}</p></article>

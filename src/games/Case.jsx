@@ -51,6 +51,7 @@ export default function Case({ data, update, onBack, onLibrary, onPlayerRoute })
       objective="Work out who killed curator Adrian Vale, how the timeline was bent, and which clues are red herrings. You are co-investigators, never opponents."
       whatYouNeed="This page, a pen and paper if you like, and someone to compare theories with. No outside research."
       selectedRole={state.introRole || 'A'}
+      audioSrc="/audio/rules/case.mp3"
       onSelectRole={role => patch({ introRole: role })}
       roles={{
         A: { name: 'Him · Player A', summary: 'Start with the Mira, Leon, and Priya suspect notes in his clue book.' },
