@@ -223,6 +223,70 @@ h1, h2, h3, h4, p { margin-top: 0; }
   .mystery-suspects { gap: 5px; }.mystery-suspects > div { min-height: 53px; padding: 6px; gap: 6px; }.mystery-suspects > div > span { width: 25px; height: 25px; }.mystery-suspects p { font-size: 13px; }.express-intro { align-items: flex-start; }.ticket-doodle { width: 65px; height: 58px; }.express-intro h2 { font-size: 20px; }.express-ticket-strip { align-items: flex-start; }.ticket-stop { display: grid; grid-template-columns: 21px 1fr; align-items: center; }.ticket-stop > i { grid-column: 1/-1; width: 100%; }.ticket-stop > b { font-size: 13px; }.answer-lock { grid-template-columns: 1fr; }.answer-lock .button { justify-self: start; }.train-progress-note { flex-direction: column; }
 }
 
+/* Mobile layout, touch targets, and restrained motion */
+html, body { overflow-x: clip; }
+.instructions-hero { position: relative; overflow: hidden; isolation: isolate; }
+.instructions-hero::after { content: '✳'; position: absolute; z-index: -1; top: -17px; right: 4%; color: rgba(202,79,108,.09); font-size: clamp(72px,12vw,145px); line-height: 1; animation: slow-spin 34s linear infinite; pointer-events: none; }
+.instructions-screen > * { animation: rise-in .45s both; }
+.instructions-screen > *:nth-child(2) { animation-delay: .04s; }
+.instructions-screen > *:nth-child(3) { animation-delay: .08s; }
+.instructions-screen > *:nth-child(4) { animation-delay: .12s; }
+.instructions-screen > *:nth-child(5) { animation-delay: .16s; }
+.instructions-screen > *:nth-child(6) { animation-delay: .20s; }
+.side-choice-card:hover { border-color: #d8a7b5; box-shadow: 0 10px 24px rgba(95,55,75,.08); }
+.side-choice-book:hover { background: #fff0f4; }
+.full-rulebook > summary { transition: color .18s ease; }
+.full-rulebook > summary:hover { color: var(--theme-dark); }
+.global-controls { animation: controls-in .35s ease-out both; }
+@keyframes controls-in { from { opacity: 0; transform: translateY(12px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+button:active:not(:disabled) { transform: scale(.985); }
+:root[data-theme="dark"] .instructions-hero::after { color: rgba(242,140,164,.1); }
+
+@media (max-width: 740px) {
+  .game-topbar { align-items: flex-start; flex-wrap: wrap; gap: 6px 10px; padding: 8px 0; }
+  .game-topbar-right { width: 100%; justify-content: flex-start; flex-wrap: wrap; gap: 6px; }
+  .route-shortcuts { flex-wrap: wrap; }
+  .library-shortcut { min-height: 40px; }
+  .game-shell { padding-bottom: 120px; }
+  .game-heading { align-items: flex-start; }
+  .instructions-hero > p { font-size: 17px; }
+  .instructions-facts p, .side-choice-select em, .how-to-list p, .full-rulebook-body article p { font-size: 15px; }
+  .choose-side, .instructions-steps { padding: 18px; }
+  .side-choice-card:hover { transform: none; }
+  .reader-pagination > span button { width: 12px; height: 12px; }
+  .reader-pagination > span button { min-width: 34px; min-height: 34px; padding: 10px; border-radius: 50%; }
+  .route-shortcuts button, .game-card-foot > button, .player-route-actions > button, .listen-button,
+  .chapter-hint > button, .route-hint > button, .obs-private-card > div button,
+  .case-expand, .archive-toggle, .how-library { min-height: 44px; }
+  .word-tile { min-height: 44px; }
+  .global-controls { right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); max-width: calc(100vw - 20px); }
+  .global-controls .theme-toggle, .global-controls .read-text-button { min-height: 44px; padding-inline: 10px; font-size: 13px; }
+}
+@media (max-width: 390px) {
+  .game-shell { padding-inline: 12px; }
+  .instructions-hero { padding: 22px 18px; }
+  .instructions-hero h2 { font-size: 34px; }
+  .instructions-hero-actions { align-items: flex-start; flex-direction: column; }
+  .instructions-time { flex-wrap: wrap; }
+  .instructions-section-title h3 { font-size: 23px; }
+  .full-rulebook { padding-inline: 14px; }
+  .full-rulebook > summary { align-items: flex-start; flex-wrap: wrap; padding: 15px 0; }
+  .full-rulebook > summary span { width: 100%; margin-left: 28px; }
+  .instructions-help .button { width: 100%; margin-left: 0; }
+  .global-controls { left: 8px; right: 8px; justify-content: center; gap: 3px; }
+  .global-controls .theme-toggle, .global-controls .read-text-button { flex: 1; gap: 6px; padding-inline: 7px; font-size: 12px; }
+  .global-controls svg { width: 17px; height: 17px; }
+  .site-nav { padding-inline: 14px; }
+  .hero-section { padding-inline: 18px; }
+  .games-section { padding-inline: 14px; }
+  .game-card-copy > p { line-height: 1.55; }
+  .player-route-page, .library-page { padding-inline: 12px; }
+  .player-nav { grid-template-columns: 1fr auto; }
+  .player-route-badge { grid-column: 1/-1; grid-row: 2; padding-bottom: 7px; }
+  .player-route-switch { grid-column: 2; grid-row: 1; }
+  .handoff-note { grid-template-columns: 28px 1fr; }
+}
+
 /* Clear, read-aloud game briefings */
 .instructions-screen { display: grid; gap: 18px; margin: 2px 0 34px; }
 .instructions-hero { padding: clamp(23px,4vw,42px); border: 1px solid #eadce3; border-radius: 25px; background: radial-gradient(circle at 100% 0,#fff 0,#fff8fa 48%,#f4fafd 100%); }
