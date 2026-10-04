@@ -3,7 +3,8 @@ import {
   ArrowRight, BookOpenText, Check, ClipboardText, Eye, EyeSlash, Heart, Image as ImageIcon,
   Key, Lightbulb, LockKey, MusicNotes, NotePencil, Sparkle, Shuffle, Timer, X, ArrowUpRight,
 } from '@phosphor-icons/react';
-import { Button, CheckpointFooter, Countdown, GameFrame, GameInstructions, HintBox, StageRail } from '../components.jsx';
+import { Button, CheckpointFooter, Countdown, GameFrame, HintBox, StageRail } from '../components.jsx';
+import RouteBriefing from '../RouteBriefing.jsx';
 
 const WORDS = ['LANTERN', 'RIVER', 'CLOCK', 'ORCHARD', 'TICKET', 'WINDOW', 'COMET', 'CANDLE', 'MIRROR', 'TRAIN', 'TEA', 'PARCEL'];
 const TARGETS = { A: [1, 4, 7, 10, 11, 12], B: [2, 3, 5, 6, 8, 9] };
@@ -15,6 +16,14 @@ const STAGES = [
   { id: 'dixit', short: 'Dixit at Distance', title: 'Same prompt. Separate worlds.', letter: 'T', time: '10 min' },
   { id: 'samePage', short: 'Same Page', title: 'How in sync are you?', letter: 'H · E · R', time: '12 min' },
   { id: 'vault', short: 'The Vault', title: 'One last little word.', letter: '', time: '' },
+];
+const BRIEFING_STOPS = [
+  { title: 'Split Key', short: 'Clue + guess', preview: 'Trade a one-word clue and find six secret words on the shared map.', icon: <Key size={18} />, position: [47, 68] },
+  { title: 'The Message', short: 'Hidden words', preview: 'A paper transmission hides two little instructions in plain sight.', icon: <NotePencil size={18} />, position: [58, 32] },
+  { title: 'Field Evidence', short: 'Object hunt', preview: 'Find nearby things and let each other invent what they mean.', icon: <ImageIcon size={18} />, position: [69, 60] },
+  { title: 'The Archive', short: 'Future Tuesday', preview: 'Write a tiny scene from an ordinary day, five years from now.', icon: <ClipboardText size={18} />, position: [78, 31] },
+  { title: 'Dixit at Distance', short: 'Picture stories', preview: 'Choose an image for one prompt, then guess the story behind it.', icon: <MusicNotes size={18} />, position: [87, 67] },
+  { title: 'Same Page', short: 'Quick choices', preview: 'Make ten tiny choices, compare your worlds, and earn the last key.', icon: <Shuffle size={18} />, position: [66, 78] },
 ];
 const INITIAL = {
   started: false, introRole: 'A', completed: [], hints: {}, activeStage: 0, codeInput: '', vaultOpen: false,
@@ -211,8 +220,8 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
   })}</div></details>;
 
   const stageItems = STAGES.map((item, index) => ({ ...item, locked: index === 6 && !completed.includes('samePage') }));
-  if (!state.started) return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} color="rose" aside={<button className="library-shortcut" onClick={onLibrary}><BookOpenText size={17} /> Read the original pages</button>}>
-    <GameInstructions
+  if (!state.started) return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} color="rose">
+    <RouteBriefing variant="paper" nodes={BRIEFING_STOPS} tagline="A little mystery, made for two."
       number="GAME 01"
       name="The Distance Protocol"
       subtitle="A cozy co-op mystery with clues, stories, and a shared final vault."

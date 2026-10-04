@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, BookOpenText, Check, ClipboardText, ClockClockwise, Fingerprint, Heart, Lightbulb, LockKey, MagnifyingGlass, NotePencil, Play, Question, Sparkle, Timer } from '@phosphor-icons/react';
-import { Button, GameFrame, GameInstructions, HintBox } from '../components.jsx';
+import { Button, GameFrame, HintBox } from '../components.jsx';
+import RouteBriefing from '../RouteBriefing.jsx';
 
 const EVIDENCE = [
   { id: 'A', title: 'The tea tray', type: 'Physical evidence', text: 'Two cups were on the desk. One has a lipstick trace matching Nora’s shade; the other has no trace. A spoon is damp. No fingerprints are recoverable from it.', thought: 'Interesting, but it does not place someone inside the locked library.' },
@@ -20,6 +21,13 @@ const QUESTIONS = [
 const INITIAL = { started: false, introRole: 'A', opened: [], discussed: [], timelineConverted: false, clockOffset: '29', killer: '', timeline: '', decisive: '', redHerring: '', hints: 0, accused: false, solved: false, question: '', questionSuspect: 'Elias Rook', questionLog: [], reviewCopied: false };
 const PROMPT = 'You are a forensic puzzle editor. Here is our solved case, followed by the evidence. Grade our reasoning 0-100. Do not just tell us the answer. Check whether our accusation explains the clock drift, the key log, the note, the contract, and the red herrings. Flag any clue that is underdetermined or unfair.';
 const HINTS = ['Start with the electronic key log. Is its time trustworthy?', 'Subtract 29 minutes from both logged times. Compare that real interval with Elias’s claimed 10:15 departure.', 'Elias knew the lock system, had the key, and fits Adrian’s note. The clock-adjusted key window is the decisive clue.'];
+const BRIEFING_STOPS = [
+  { title: 'Timeline', short: 'Build the night', preview: 'Lay six timestamps in order. One clock is telling the wrong story.', icon: <ClockClockwise size={18} />, position: [46, 65] },
+  { title: 'Suspects', short: 'Five accounts', preview: 'Compare five private alibis and look for the detail that cannot fit.', icon: <Fingerprint size={18} />, position: [56, 36] },
+  { title: 'Evidence', short: 'Seven files', preview: 'Open evidence cards, mark them discussed, and pin a theory together.', icon: <MagnifyingGlass size={18} />, position: [68, 63] },
+  { title: 'Clock test', short: '29-minute drift', preview: 'Correct the key log and see who could have entered the library.', icon: <Timer size={18} />, position: [78, 34] },
+  { title: 'Accusation', short: 'Name the killer', preview: 'Choose a suspect, the clock trick, one clincher, and one red herring.', icon: <LockKey size={18} />, position: [88, 62] },
+];
 
 function normalize(s) { return (s || '').trim().toLowerCase(); }
 function SourceRoutes({ onPlayerRoute, onLibrary, onRules }) { return <div className="route-shortcuts"><button onClick={() => onPlayerRoute('/his')}>His clues · A</button><button onClick={() => onPlayerRoute('/hers')}>Her clues · B</button>{onRules && <button onClick={onRules}>How to play</button>}<button onClick={onLibrary}>Source pages</button></div>; }
@@ -42,8 +50,8 @@ export default function Case({ data, update, onBack, onLibrary, onPlayerRoute })
     <section className="case-ending"><span className="case-end-seal"><Check size={27} /></span><span className="micro-label">Joint accusation · correct</span><h2>The killer was <em>Elias Rook.</em></h2><p>The key log was the trap. The system ran 29 minutes fast; corrected to 10:07–10:33, the log puts the key with the lock specialist after his claimed departure. Adrian’s note tells you who would know about the clock.</p><div className="case-answer-summary"><span>THE REAL KEY WINDOW <b>10:07–10:33 PM</b></span><span>THE DECOY SOUND <b>The old radiator</b></span><span>THE SECOND LIE <b>Mira’s contract time</b></span></div><div className="ai-review-box"><div><span className="micro-label">Optional · let the AI review your reasoning</span><p>Copy the forensic-puzzle-editor prompt into your shared conversation after you paste your accusation and the evidence.</p></div><Button kind="quiet" onClick={copyReview}><ClipboardText size={15} />{state.reviewCopied ? 'Copied' : 'Copy prompt'}</Button><details><summary>Read the prompt</summary><p>{PROMPT}</p></details></div><Button kind="soft" onClick={() => { patch(INITIAL); setEnding(false); }}>Reopen the evidence board</Button></section>
   </GameFrame>;
 
-  if (!state.started) return <GameFrame title="The 11:47 Case" eyebrow="Game 02 · a two-person murder mystery" subtitle="Five suspects, seven clues, and one broken clock." icon={<span className="case-emblem">11:47</span>} onBack={onBack} color="lilac" aside={<button className="library-shortcut" onClick={onLibrary}><BookOpenText size={17} /> Read the original pages</button>}>
-    <GameInstructions
+  if (!state.started) return <GameFrame title="The 11:47 Case" eyebrow="Game 02 · a two-person murder mystery" subtitle="Five suspects, seven clues, and one broken clock." icon={<span className="case-emblem">11:47</span>} onBack={onBack} color="lilac">
+    <RouteBriefing variant="case" nodes={BRIEFING_STOPS} tagline="Five suspects. One wrong clock."
       number="GAME 02"
       name="The 11:47 Case"
       subtitle="A gentle locked-room murder mystery. Solve the case together, then read the explanation."

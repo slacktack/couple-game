@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowRight, Check, Compass, Eye, EyeSlash, Heart, Lightbulb, LockKey, MoonStars, Sparkle, Star, Timer } from '@phosphor-icons/react';
-import { Button, GameFrame, GameInstructions, HintBox } from '../components.jsx';
+import { Button, GameFrame, HintBox } from '../components.jsx';
+import RouteBriefing from '../RouteBriefing.jsx';
 
 const LOCKS = [
   { title: 'The constellation grid', label: 'LOCK 01', answer: '566', intro: 'Count the letters in the star names. Keep the counts for the constellations with exactly one repeated letter, in the order shown.', cardA: 'A · Your star list: ORION · LYRA · CYGNUS', cardB: 'B · Your star list: DRACO · TAURUS · GEMINI', input: 'Three digits', hints: ['Look for the constellation name with one letter appearing twice.', 'The relevant names are ORION, TAURUS, and GEMINI. Count their letters.', 'Those counts, in that order, are 5 · 6 · 6.'] },
@@ -8,6 +9,13 @@ const LOCKS = [
   { title: 'The five switches', label: 'LOCK 03', answer: '9', accepted: ['BCD', 'B C D', '9'], intro: 'Exactly three switches are ON. A is ON if and only if B is OFF. C is opposite A. D matches B. E is opposite D. Which switches are ON? Add their alphabet positions.', cardA: 'A · A is ON if and only if B is OFF. C is the opposite of A.', cardB: 'B · D matches B. E is the opposite of D. Exactly three switches are ON.', input: 'Name the switches or enter their total', hints: ['Start by choosing B as ON or OFF, then follow the clues.', 'If B is OFF, only A and E are ON. If B is ON, B, C, and D are ON.', 'B, C, and D are the three ON switches: 2 + 3 + 4 = 9.'] },
   { title: 'The star-map cipher', label: 'LOCK 04', answer: 'COMET', intro: 'The terminal fragment is LXVNC. Use the number from Lock 03 as the Caesar key. Move every letter backward through the alphabet.', cardA: 'A · The previous lock gave you a number. Keep it nearby.', cardB: 'B · Cipher fragment: LXVNC. Move backward through the alphabet.', input: 'Five letters', hints: ['Use the total from Lock 03 as the key.', 'Move each letter back 9 places, wrapping from A to Z when needed.', 'LXVNC becomes COMET. The source player sheet mentions a poem that was not included; the validated host route is this Caesar cipher.'] },
   { title: 'The final vault', label: 'LOCK 05', answer: 'SPACE', accepted: ['SPACE'], intro: 'The archive says: “The object answers are ORBIT and COMET. The place they belong to is the final password.” Enter the shared destination.', cardA: 'A · Your words so far: ORBIT and COMET.', cardB: 'B · Think of one place where both an orbit and a comet belong.', input: 'The final password', hints: ['They are both things you look for beyond Earth.', 'An orbit and a comet have one shared destination.', 'The final word is SPACE.'] },
+];
+const BRIEFING_STOPS = [
+  { title: 'Constellations', short: 'Count the stars', preview: 'Find the repeated letters and pin their counts to the archive strip.', icon: <Star size={17} />, position: [50, 10] },
+  { title: 'Mirror signal', short: 'Reverse a message', preview: 'Turn a reflected transmission around to recover its hidden word.', icon: <MoonStars size={17} />, position: [86, 31] },
+  { title: 'Five switches', short: 'Trace the circuit', preview: 'Follow the ON and OFF links until the station’s panel lights up.', icon: <Sparkle size={17} />, position: [73, 80] },
+  { title: 'Star map', short: 'Decode the sky', preview: 'Use the switch total as a key and move backward through the alphabet.', icon: <Compass size={17} />, position: [30, 70] },
+  { title: 'Final vault', short: 'Open the archive', preview: 'Bring your two sky words to the place they both belong.', icon: <LockKey size={17} />, position: [51, 52] },
 ];
 const INITIAL = { started: false, introRole: 'A', step: 0, role: 'A', cardOpen: false, answer: '', answers: [], hints: {}, completed: [], finished: false, archiveOpen: false, sideQuest: { role: 'A', notes: { A: '', B: '' }, revealed: false } };
 const normalized = value => (value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
@@ -34,8 +42,8 @@ export default function Observatory({ data, update, onBack, onLibrary, onPlayerR
   if (state.finished || ending) return <GameFrame title="The Observatory Lock" eyebrow="Game 03 · a two-person digital escape room" subtitle="The archive is open. The star map is all yours." icon={<span className="observatory-emblem"><MoonStars size={32} weight="duotone" /></span>} onBack={onBack} color="blue" aside={<SourceRoutes onPlayerRoute={onPlayerRoute} onLibrary={onLibrary} />}>
     <section className="observatory-ending"><span className="star-map-glow"><Star size={34} weight="fill" /></span><span className="micro-label">The archive opens at 23:59</span><h2>You unlocked the <em>star map.</em></h2><p>You found ORBIT, decoded COMET, and sent them both to the same place. The constellation room is yours to keep.</p><div className="archive-strip"><span>566</span><span>ORBIT</span><span>9</span><span>COMET</span><span>SPACE</span></div><button className="archive-toggle" onClick={() => patch({ archiveOpen: !state.archiveOpen })}>{state.archiveOpen ? 'Hide the route' : 'Read your solved archive strip'} <ArrowRight size={14} /></button>{state.archiveOpen && <p className="archive-spoken">Lock 01 → 566 · Lock 02 → ORBIT · Lock 03 → 9 · Lock 04 → COMET · Lock 05 → SPACE</p>}<Button kind="soft" onClick={reset}>Play the locks again</Button></section>
   </GameFrame>;
-  if (!state.started) return <GameFrame title="The Observatory Lock" eyebrow="Game 03 · a two-person digital escape room" subtitle="Five small locks, private navigator notes, and a patient archive." icon={<span className="observatory-emblem"><MoonStars size={32} weight="duotone" /></span>} onBack={onBack} color="blue" aside={<button className="library-shortcut" onClick={onLibrary}><BookOpenText size={17} /> Read the original pages</button>}>
-    <GameInstructions
+  if (!state.started) return <GameFrame title="The Observatory Lock" eyebrow="Game 03 · a two-person digital escape room" subtitle="Five small locks, private navigator notes, and a patient archive." icon={<span className="observatory-emblem"><MoonStars size={32} weight="duotone" /></span>} onBack={onBack} color="blue">
+    <RouteBriefing variant="orbit" nodes={BRIEFING_STOPS} tagline="Five locks. One shared orbit."
       number="GAME 03"
       name="The Observatory Lock"
       subtitle="A cozy, shared escape room in an old star observatory."
