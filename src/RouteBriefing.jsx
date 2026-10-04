@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, BookOpenText, Check, Compass, SpeakerHigh, Timer } from '@phosphor-icons/react';
+import { ArrowRight, BookOpenText, CaretDown, Check, Compass, Timer } from '@phosphor-icons/react';
 import { ReadTextButton } from './components.jsx';
 
 const BOOK_ROUTES = [
@@ -44,7 +44,7 @@ export default function RouteBriefing({
       <div className="briefing-console-actions"><ReadTextButton text={spokenRules} audioSrc={audioSrc} label="Listen to rules"/><button className="briefing-source-link" onClick={onReadRulebook}><BookOpenText size={15}/> Source pages</button></div>
     </div>
 
-    <details className="briefing-rules"><summary><span><SpeakerHigh size={16}/> Need the full rundown?</span><span>{steps.length} quick steps <i>·</i> full rules</span></summary>
+    <details className="briefing-rules"><summary><span><BookOpenText size={16}/> How to play</span><span>{steps.length} quick steps <i>·</i> full rules</span><CaretDown className="briefing-rules-caret" size={16}/></summary>
       <div className="briefing-steps">{steps.map((step, index) => <article key={step.title}><span>{String(index + 1).padStart(2, '0')}</span><div><b>{step.title}</b><p>{step.text}</p></div></article>)}</div>
       <details className="briefing-rulebook"><summary><BookOpenText size={15}/> Read every rule</summary><div>{rulebook.map((item, index) => <article key={`${item.title}-${index}`}><b>{item.title}</b><p>{item.text}</p></article>)}</div></details>
     </details>

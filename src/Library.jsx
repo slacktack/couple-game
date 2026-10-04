@@ -1,9 +1,9 @@
 import { useMemo, useState } from 'react';
 import { ArrowLeft, ArrowRight, BookOpenText, Eye, EyeSlash, LockKey, NotePencil, ShieldWarning } from '@phosphor-icons/react';
-import { Button, ReadTextButton } from './components.jsx';
+import { Button, ReadTextButton, ThemeToggle } from './components.jsx';
 import { documents } from './data/library.js';
 
-export default function Library({ onBack, initialDocument = 'player-pack' }) {
+export default function Library({ onBack, initialDocument = 'player-pack', theme, onToggleTheme }) {
   const [documentId, setDocumentId] = useState(initialDocument);
   const [pageIndex, setPageIndex] = useState(0);
   const [hostOpen, setHostOpen] = useState(false);
@@ -15,7 +15,7 @@ export default function Library({ onBack, initialDocument = 'player-pack' }) {
   const selectDoc = id => { setDocumentId(id); setPageIndex(0); setHostOpen(false); setCardOpen(false); setNotice(''); };
   const move = delta => { setPageIndex(index => Math.max(0, Math.min(current.pages.length - 1, index + delta))); setCardOpen(false); };
   return <main className="library-page">
-    <div className="game-topbar"><button className="back-link" onClick={onBack}><ArrowLeft size={17} weight="bold" /> <span>Back to your games</span></button><span className="library-topmark"><BookOpenText size={17} /> Protocol library</span></div>
+    <div className="game-topbar"><button className="back-link" onClick={onBack}><ArrowLeft size={17} weight="bold" /> <span>Back to your games</span></button><div className="game-topbar-right"><span className="library-topmark"><BookOpenText size={17} /> Protocol library</span><ThemeToggle theme={theme} onToggle={onToggleTheme} className="nav-theme-toggle" /></div></div>
     <header className="library-header"><div><span className="micro-label">A calm read-through</span><h1>Every page,<br /><em>in plain sight.</em></h1><p>The player pack, both separate key cards, and the full host guide are here. Read one page at a time so nothing spoils the next surprise by accident.</p></div><div className="library-art" aria-hidden="true"><BookOpenText size={43} weight="duotone" /><span>✳</span></div></header>
     <div className="library-tabs">{documents.map(doc => <button key={doc.id} className={`${doc.id === documentId ? 'active' : ''} ${doc.private ? 'tab-private' : ''}`} onClick={() => selectDoc(doc.id)}><span>{doc.private && <LockKey size={14} />}{doc.title}</span><small>{doc.subtitle}</small></button>)}</div>
     <section className="reader-shell">

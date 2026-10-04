@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import {
-  ArrowRight, BookOpenText, Check, ClipboardText, Eye, EyeSlash, Heart, Image as ImageIcon,
+  ArrowRight, BookOpenText, CaretDown, Check, ClipboardText, Compass, Eye, EyeSlash, Heart, Image as ImageIcon,
   Key, Lightbulb, LockKey, MusicNotes, NotePencil, Sparkle, Shuffle, Timer, X, ArrowUpRight,
+  Armchair, Buildings, CloudRain, FilmStrip, ForkKnife, HouseSimple, Microphone, Mountains, MoonStars,
+  Radio, Seat, SunHorizon, Television, Waves, Waveform,
 } from '@phosphor-icons/react';
-import { Button, CheckpointFooter, Countdown, GameFrame, HintBox, StageRail } from '../components.jsx';
+import { Button, CheckpointFooter, Countdown, GameFrame, HintBox } from '../components.jsx';
 import RouteBriefing from '../RouteBriefing.jsx';
 
 const WORDS = ['LANTERN', 'RIVER', 'CLOCK', 'ORCHARD', 'TICKET', 'WINDOW', 'COMET', 'CANDLE', 'MIRROR', 'TRAIN', 'TEA', 'PARCEL'];
@@ -27,12 +29,12 @@ const BRIEFING_STOPS = [
 ];
 const INITIAL = {
   started: false, introRole: 'A', completed: [], hints: {}, activeStage: 0, codeInput: '', vaultOpen: false,
-  split: { role: 'A', cardOpen: false, clue: '', number: 1, turns: [], found: { A: 0, B: 0 }, guesses: '', misses: 0 },
+  split: { role: 'A', phase: 'clue', cardOpen: false, clue: '', number: 1, currentClue: '', currentNumber: 1, foundThisTurn: 0, turns: [], found: { A: 0, B: 0 }, guesses: '', misses: 0 },
   message: { method: '', extraction: '' },
   evidence: { role: 'A', responses: { A: ['', '', ''], B: ['', '', ''] }, bonus: { A: '', B: '' } },
   archive: { role: 'A', texts: { A: '', B: '' }, judgeDone: false },
   dixit: { role: 'A', interpretations: { A: '', B: '' }, revealed: false, shared: false },
-  samePage: { role: 'A', answers: { A: Array(10).fill(''), B: Array(10).fill('') }, revealed: false, riddle: '' },
+  samePage: { role: 'A', questionIndex: 0, answers: { A: Array(10).fill(''), B: Array(10).fill('') }, revealed: false, riddle: '' },
   sidequests: [],
 };
 const SIDEQUESTS = [
@@ -47,6 +49,24 @@ const SAME_PAGE = [
   ['Sea', 'Mountains'], ['Morning', 'Midnight'], ['City', 'Small town'], ['Plan', 'Improvisation'], ['Window seat', 'Aisle'],
   ['Sweet', 'Savoury'], ['Rain', 'Cold clear night'], ['Film', 'Series'], ['Photo', 'Voice note'], ['Stay in', 'Go out'],
 ];
+const SAME_PAGE_QUESTIONS = [
+  'Where would we disappear for a weekend?', 'When do our best conversations happen?', 'Which kind of place feels like our own?',
+  'How should a free afternoon unfold?', 'What makes the journey feel right?', 'What belongs beside a late-night drink?',
+  'What kind of night are we saving?', 'What should we put on after dinner?', 'How do you want me to remember this?',
+  'What sounds good when the day is finally ours?',
+];
+const SAME_PAGE_ICONS = [
+  [<Waves size={25} weight="duotone" />, <Mountains size={25} weight="duotone" />],
+  [<SunHorizon size={25} weight="duotone" />, <MoonStars size={25} weight="duotone" />],
+  [<Buildings size={25} weight="duotone" />, <HouseSimple size={25} weight="duotone" />],
+  [<NotePencil size={25} weight="duotone" />, <Shuffle size={25} weight="duotone" />],
+  [<Seat size={25} weight="duotone" />, <Armchair size={25} weight="duotone" />],
+  [<Heart size={25} weight="duotone" />, <ForkKnife size={25} weight="duotone" />],
+  [<CloudRain size={25} weight="duotone" />, <Sparkle size={25} weight="duotone" />],
+  [<FilmStrip size={25} weight="duotone" />, <Television size={25} weight="duotone" />],
+  [<ImageIcon size={25} weight="duotone" />, <Microphone size={25} weight="duotone" />],
+  [<HouseSimple size={25} weight="duotone" />, <Compass size={25} weight="duotone" />],
+];
 const METHODS = ['Think category, not literal object.', 'Your partner knows which words are safe for you, not for them.', 'A clue can bridge multiple words.'];
 const MESSAGE_HINTS = ['Look at how the sentences begin before you look at what they mean.', 'The first four sentences tell you an instruction.', 'Take the third word in each of the final five sentences. Their initials spell ORBIT.'];
 const PROMPT = 'Act as a neutral game referee for a two-person creative challenge. We each wrote a 130–180 word scene answering the same prompt. Your job is NOT to judge who loves more, who is the better writer, or whose relationship is healthier. Give us: 1. A score out of 10 for each piece on sensory specificity. 2. A score out of 10 for each on believable everyday detail. 3. A score out of 10 for how strongly each scene implies a shared world. 4. Three concrete details that overlap in spirit across the two pieces. 5. One surprising difference that is interesting rather than bad. 6. A one-sentence verdict: what do these two scenes accidentally reveal about how we imagine ordinary life together? Do not rewrite our work. Keep the tone warm, sharp, and slightly playful.';
@@ -55,13 +75,18 @@ function PlayerLinks({ onPlayerRoute }) {
   return <div className="route-shortcuts"><button onClick={() => onPlayerRoute('/his')}>His clues · A</button><button onClick={() => onPlayerRoute('/hers')}>Her clues · B</button></div>;
 }
 
+function ChapterMenu({ items, active, completed, onSelect }) {
+  const activeItem = items[active];
+  return <details className="chapter-menu"><summary><span className="chapter-menu-number">{String(active + 1).padStart(2, '0')}</span><span className="chapter-menu-copy"><b>{activeItem.short}</b></span><span className="chapter-menu-progress">{completed.filter(id => id !== 'vault').length}/6</span><CaretDown size={17} /></summary><div className="chapter-menu-list">{items.map((item, index) => { const allowed = index === 0 || completed.includes(items[index - 1].id); return <button type="button" key={item.id} disabled={!allowed} className={`${active === index ? 'is-active' : ''} ${completed.includes(item.id) ? 'is-done' : ''}`} onClick={event => { onSelect(index); event.currentTarget.closest('details').open = false; }}><span>{completed.includes(item.id) ? <Check size={14}/> : String(index + 1).padStart(2, '0')}</span><b>{item.short}</b>{active === index && <i>YOU ARE HERE</i>}{!allowed && <LockKey size={14}/>}</button>; })}</div></details>;
+}
+
 function countWords(value) { return value.trim() ? value.trim().split(/\s+/).length : 0; }
 function SelectPlayer({ value, onChange, label = 'Hand the screen to' }) {
   return <div className="role-switch"><span>{label}</span>{['A', 'B'].map(role => <button key={role} className={value === role ? 'selected' : ''} onClick={() => onChange(role)}>Player {role}</button>)}</div>;
 }
 function completeFlags(state, id) { return (state.completed || []).includes(id); }
 
-export default function Protocol({ data, update, onBack, onLibrary, onPlayerRoute }) {
+export default function Protocol({ data, update, onBack, onLibrary, onPlayerRoute, theme, onToggleTheme }) {
   const [photoUrls, setPhotoUrls] = useState({});
   const state = { ...INITIAL, ...data };
   const completed = state.completed || [];
@@ -87,28 +112,48 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
     const split = { ...INITIAL.split, ...(state.split || {}) };
     const role = split.role || 'A';
     const solved = split.found?.[role] || 0;
+    const phase = split.phase || 'clue';
+    const currentNumber = Number(split.currentNumber) || 1;
     const submitClue = () => {
       if (!split.clue.trim()) return;
       patchSection('split', old => ({
         turns: [...(old.turns || []), { role: old.role, clue: old.clue.trim(), number: Number(old.number) || 1, guesses: (old.guesses || '').trim() }],
-        clue: '', guesses: '', cardOpen: false,
+        clue: '', guesses: '', cardOpen: false, phase: 'map', currentClue: old.clue.trim(), currentNumber: Number(old.number) || 1, foundThisTurn: 0,
       }));
     };
-    const setGuessCount = value => patchSection('split', old => ({ found: { ...old.found, [old.role]: Math.min(6, Math.max(0, (old.found?.[old.role] || 0) + value)) } }));
+    const confirmTarget = () => patchSection('split', old => {
+      const foundThisTurn = (old.foundThisTurn || 0) + 1;
+      const turnFinished = foundThisTurn >= (Number(old.currentNumber) || 1);
+      return {
+        found: { ...old.found, [role]: Math.min(6, (old.found?.[role] || 0) + 1) },
+        foundThisTurn: turnFinished ? 0 : foundThisTurn,
+        phase: turnFinished ? 'clue' : 'map',
+        role: turnFinished ? (role === 'A' ? 'B' : 'A') : role,
+        currentClue: turnFinished ? '' : old.currentClue,
+        currentNumber: turnFinished ? 1 : old.currentNumber,
+        guesses: '', cardOpen: false, clue: '',
+      };
+    });
+    const missTarget = () => patchSection('split', old => ({ misses: (old.misses || 0) + 1, guesses: '' }));
+    const passClue = () => patchSection('split', old => ({ role: role === 'A' ? 'B' : 'A', phase: 'clue', currentClue: '', currentNumber: 1, foundThisTurn: 0, guesses: '', cardOpen: false, clue: '' }));
     const hints = [METHODS[0], METHODS[1], METHODS[2]];
     return <>
-      <div className="stage-intro"><p>This is the asymmetric one. The active player sees their own targets. Give a one-word clue and a number; your partner guesses from the shared grid. Swap after each turn.</p><div className="stage-meta"><span><Timer size={15} /> 12 minutes</span><span><Heart size={15} /> One team, two secret maps</span></div></div>
-      <div className="split-layout">
-        <section className="play-panel split-secret">
-          <div className="panel-heading"><span className="mini-icon rose-icon"><LockKey size={17} /></span><div><h3>Private key card</h3><p>Hand over the screen before revealing.</p></div></div>
-          <SelectPlayer value={role} onChange={next => patchSection('split', { role: next, cardOpen: false, clue: '', guesses: '' })} label="Clue-giver" />
-          {!split.cardOpen ? <button className="privacy-card" onClick={() => patchSection('split', { cardOpen: true })}><Eye size={22} /><strong>Reveal Player {role}'s targets</strong><span>Ask the other player to look away first.</span></button> : <div className="target-reveal"><div className="target-reveal-head"><span>ONLY PLAYER {role} READS THIS</span><button onClick={() => patchSection('split', { cardOpen: false })} aria-label="Hide private key card"><EyeSlash size={18} /></button></div><div className="target-word-list">{TARGETS[role].map(n => <span key={n}>{String(n).padStart(2, '0')} <b>{WORDS[n - 1]}</b></span>)}</div><p>Your partner is trying to find these six words. Keep the list to yourself.</p></div>}
-          <div className="target-meter"><div><span>Player {role}'s targets found</span><strong>{solved}/6</strong></div><div className="meter-track"><i style={{ width: `${Math.min(100, solved / 6 * 100)}%` }} /></div></div>
-          <div className="clue-entry"><span className="input-caption">Your clue · one word</span><div className="clue-fields"><input value={split.clue || ''} onChange={e => patchSection('split', { clue: e.target.value })} placeholder="e.g. sky" aria-label="One-word clue" /><label>How many?<select value={split.number || 1} onChange={e => patchSection('split', { number: Number(e.target.value) })}>{[1, 2, 3, 4, 5, 6].map(n => <option key={n}>{n}</option>)}</select></label></div><Button kind="berry" onClick={submitClue}><Sparkle size={16} /> Give clue & hide my card</Button></div>
-          <div className="guess-pad"><span className="input-caption">Shared guess board</span><p>Tap the word your partner guessed, then confirm it together.</p><div className="word-grid">{WORDS.map((word, index) => <button key={word} className="word-tile" onClick={() => patchSection('split', { guesses: word })}>{String(index + 1).padStart(2, '0')} <b>{word}</b></button>)}</div>{split.guesses && <div className="guess-confirm"><span>They guessed <b>{split.guesses}</b>?</span><div><button className="tiny-accept" onClick={() => { setGuessCount(1); patchSection('split', { guesses: '' }); }}>Yes, target found</button><button className="tiny-decline" onClick={() => { patchSection('split', old => ({ misses: (old.misses || 0) + 1, guesses: '' })); }}>Miss; try again</button></div></div>}</div>
-          <div className="mini-turn-log"><div className="log-heading"><span className="input-caption">Clue log</span><span>{split.turns?.length || 0}/9 turns</span></div>{(split.turns || []).length ? split.turns.map((turn, i) => <div className="log-line" key={`${turn.clue}-${i}`}><b>{turn.role}</b><span>{turn.clue} · {turn.number}</span>{turn.guesses && <em>guess: {turn.guesses}</em>}</div>) : <p>No clues yet. Keep each clue to one word plus a number.</p>}</div>
+      <div className="stage-intro"><p>One player gives a clue. The other taps the map.</p><div className="stage-meta"><span><Timer size={15} /> 12 minutes</span><span><Heart size={15} /> One team</span></div></div>
+      <div className={`split-layout ${phase === 'map' ? 'map-phase' : ''}`}>
+        <section className={`play-panel split-secret ${phase === 'map' ? 'guessing-phase' : 'clue-phase'}`}>
+          {phase === 'clue' ? <>
+            <div className="panel-heading"><span className="mini-icon rose-icon"><LockKey size={17} /></span><div><h3>Clue-giver · Player {role}</h3><p>Keep your six marked places private.</p></div></div>
+            <SelectPlayer value={role} onChange={next => patchSection('split', { role: next, cardOpen: false, clue: '', guesses: '' })} label="Who gives this clue?" />
+            {!split.cardOpen ? <button className="privacy-card" onClick={() => patchSection('split', { cardOpen: true })}><Eye size={22} /><strong>Open your private map</strong><span>Hand over the screen first.</span></button> : <div className="target-reveal"><div className="target-reveal-head"><span>ONLY PLAYER {role} READS THIS</span><button onClick={() => patchSection('split', { cardOpen: false })} aria-label="Hide private key card"><EyeSlash size={18} /></button></div><div className="target-word-list">{TARGETS[role].map(n => <span key={n}>{String(n).padStart(2, '0')} <b>{WORDS[n - 1]}</b></span>)}</div></div>}
+            <div className="target-meter"><div><span>Targets found</span><strong>{solved}/6</strong></div><div className="meter-track"><i style={{ width: `${Math.min(100, solved / 6 * 100)}%` }} /></div></div>
+            {split.cardOpen && <div className="clue-entry"><span className="input-caption">Give one word + a number</span><div className="clue-fields"><input value={split.clue || ''} onChange={e => patchSection('split', { clue: e.target.value })} placeholder="e.g. sky" aria-label="One-word clue" /><fieldset className="count-field"><legend>Places it links</legend><div className="count-picker" role="group" aria-label="Number of words in clue">{[1, 2, 3, 4, 5, 6].map(n => <button type="button" key={n} className={Number(split.number || 1) === n ? 'selected' : ''} aria-pressed={Number(split.number || 1) === n} onClick={() => patchSection('split', { number: n })}>{n}</button>)}</div></fieldset></div><Button kind="berry" disabled={!split.clue.trim()} onClick={submitClue}><Sparkle size={16} /> Send clue to partner</Button></div>}
+          </> : <>
+            <div className="partner-clue-banner"><span className="partner-avatar">{role === 'A' ? 'B' : 'A'}</span><div><small>PLAYER {role === 'A' ? 'B' : 'A'} · GUESSER</small><b>{split.currentClue}</b></div><span className="clue-target-count">{split.foundThisTurn || 0}<i> / </i>{currentNumber}</span></div>
+            <div className="guess-pad"><div className="map-heading"><span className="input-caption">Shared map</span><span className="map-stamp"><Compass size={14}/> 12 places</span></div><p>Tap the place your partner picked.</p><div className="word-grid"><svg className="map-thread" viewBox="0 0 1000 380" preserveAspectRatio="none" aria-hidden="true"><path d="M165 45 H500 H835 Q875 45 875 82 V105 Q875 125 835 125 H165 Q125 125 125 165 V196 Q125 216 165 216 H835 Q875 216 875 256 V287 Q875 307 835 307 H165"/></svg>{WORDS.map((word, index) => <button type="button" key={word} className={`word-tile ${split.guesses === word ? 'is-selected' : ''}`} onClick={() => patchSection('split', { guesses: word })} aria-pressed={split.guesses === word}><span className="word-tile-number">{String(index + 1).padStart(2, '0')}</span><b>{word}</b><Compass size={14} className="word-tile-marker"/></button>)}</div>{split.guesses && <div className="guess-confirm"><span>You picked <b>{split.guesses}</b></span><div><button type="button" className="tiny-accept" onClick={confirmTarget}>{(split.foundThisTurn || 0) + 1 >= currentNumber ? 'Found it · swap players' : 'Found it · one more'}</button><button type="button" className="tiny-decline" onClick={missTarget}>Try another place</button></div></div>}<button type="button" className="pass-clue" onClick={passClue}><ArrowRight size={14}/> Pass and switch clue-giver</button></div>
+          </>}
+          {split.turns?.length > 0 && <details className="mini-turn-log"><summary><span>Clue trail</span><i>{split.turns.length} turns</i><CaretDown size={14}/></summary><div>{split.turns.map((turn, i) => <p key={`${turn.clue}-${i}`}><b>{turn.role}</b><span>{turn.clue} · {turn.number}</span></p>)}</div></details>}
         </section>
-        <aside className="side-note rose-side"><span className="micro-label">If you get stuck</span><h3>Think category, not literal object.</h3><p>Answers are never worth a tense moment. Use a hint, swap the clue, and keep the good part of the night.</p>{hintBox(hints, 'Rescue this checkpoint')}<div className="side-petal" aria-hidden="true">T</div></aside>
+        <aside className="side-note rose-side"><span className="micro-label">IF YOU GET STUCK</span>{hintBox(hints, 'Skip this puzzle')}<div className="side-petal" aria-hidden="true">T</div></aside>
       </div>
       {footer('We found the targets')}
     </>;
@@ -120,7 +165,7 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
     const correct = msg.method.trim().toUpperCase() === 'TAKE' && msg.extraction.trim().toUpperCase() === 'ORBIT';
     return <>
       <div className="stage-intro"><p>Two layers hide in plain sight. First read the first four sentences from a certain angle. Then use what they tell you on the last five.</p><div className="stage-meta"><span><Timer size={15} /> 8 minutes</span><span><Sparkle size={15} /> Nothing is case-sensitive</span></div></div>
-      <section className="message-note"><span className="micro-label">Recovered transmission</span><div className="message-text">{text.map((line, i) => <p key={i} className={i === 4 ? 'message-break' : ''}><span>{String(i + 1).padStart(2, '0')}</span>{line}</p>)}</div><small>Look at where the sentences begin, then count carefully.</small></section>
+      <section className="message-note"><div className="transmission-heading"><span className="transmission-art"><Radio size={26} weight="duotone" /></span><span><span className="micro-label">Recovered transmission</span><small>INBOUND · 98.4 MHZ</small></span><Waveform size={66} weight="thin" className="transmission-wave" /></div><div className="message-text">{text.map((line, i) => <p key={i} className={i === 4 ? 'message-break' : ''}><span>{String(i + 1).padStart(2, '0')}</span>{line}</p>)}</div><small>Read the opening initials, then follow the instruction in the final five lines.</small></section>
       <section className="play-panel message-entry"><div className="panel-heading"><span className="mini-icon peach-icon"><NotePencil size={17} /></span><div><h3>Enter the two layers</h3><p>The extraction chain should make a five-letter word.</p></div></div><div className="two-answer-fields"><label><span>First four initials → method</span><input value={msg.method} onChange={e => patchSection('message', { method: e.target.value })} placeholder="four letters" maxLength={8} /></label><label><span>Take the method across the final five → word</span><input value={msg.extraction} onChange={e => patchSection('message', { extraction: e.target.value })} placeholder="five letters" maxLength={10} /></label></div>{msg.method && msg.extraction && <p className={`answer-feedback ${correct ? 'answer-correct' : ''}`}>{correct ? 'That fits the transmission. The key is its first letter.' : 'Close the page for a second and look at the sentence starts.'}</p>}</section>
       <div className="clarification-note"><Lightbulb size={18} /><p><b>A clearer version for this site:</b> the source PDF’s last-five-sentence extraction has a small typo. This version makes the intended third-word initials spell ORBIT, just as the host guide says.</p></div>
       {hintBox(MESSAGE_HINTS, 'Reveal the key and move on')}
@@ -131,16 +176,16 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
   const renderEvidence = () => {
     const ev = { ...INITIAL.evidence, ...(state.evidence || {}) };
     const prompts = [
-      ['Something that makes a sound', 'Show it. What memory or mood might it represent?'],
-      ['Something older than your relationship', 'Stay quiet for 30 seconds. Let them invent its story.'],
-      ['Something absurdly ordinary', 'Why is this boring object secretly a good symbol for you two?'],
+      ['Something that makes a sound', 'Show it. What memory or mood might it represent?', <MusicNotes size={25} weight="duotone" />],
+      ['Something older than your relationship', 'Stay quiet for 30 seconds. Let them invent its story.', <NotePencil size={25} weight="duotone" />],
+      ['Something absurdly ordinary', 'Why is this boring object secretly a good symbol for you two?', <Sparkle size={25} weight="duotone" />],
     ];
     const responseCount = [...(ev.responses?.A || []), ...(ev.responses?.B || [])].filter(v => v.trim()).length;
     const capture = (role, index, value) => patchSection('evidence', old => { const rows = [...(old.responses?.[role] || ['', '', ''])]; rows[index] = value; return { responses: { ...old.responses, [role]: rows } }; });
     return <>
       <div className="stage-intro"><p>Find three everyday objects in four minutes. Give each one a little story; the other person gets to interpret it. No one needs a perfect guess.</p><div className="stage-meta"><span><Timer size={15} /> Four-minute search each</span><span><Heart size={15} /> Objects can be tiny or silly</span></div></div>
       <Countdown seconds={240} label="Your scavenger sprint" />
-      <section className="evidence-sheet"><div className="sheet-top"><div><span className="micro-label">The evidence board</span><h3>Three objects, two points of view.</h3></div><SelectPlayer value={ev.role} onChange={role => patchSection('evidence', { role })} label="Writing for" /></div><div className="evidence-prompts">{prompts.map(([title, hint], i) => <label className="evidence-prompt" key={title}><span className="prompt-number">0{i + 1}</span><span className="prompt-title">{title}<small>{hint}</small></span><input value={ev.responses?.[ev.role]?.[i] || ''} onChange={e => capture(ev.role, i, e.target.value)} placeholder="A memory, a guess, or a tiny story…" /></label>)}</div><div className="evidence-summary"><span>{responseCount}/6 stories added</span><div className="meter-track"><i style={{ width: `${responseCount / 6 * 100}%` }} /></div></div></section>
+      <section className="evidence-sheet"><div className="sheet-top"><div><span className="micro-label">The evidence board</span><h3>Three objects, two points of view.</h3></div><SelectPlayer value={ev.role} onChange={role => patchSection('evidence', { role })} label="Writing for" /></div><div className="evidence-prompts">{prompts.map(([title, hint, icon], i) => <label className={`evidence-prompt evidence-prompt-${i + 1}`} key={title}><span className="prompt-art"><span>{icon}</span><i>0{i + 1}</i></span><span className="prompt-title"><b>{title}</b><small>{hint}</small></span><input value={ev.responses?.[ev.role]?.[i] || ''} onChange={e => capture(ev.role, i, e.target.value)} placeholder="Add a tiny story…" /></label>)}</div><div className="evidence-summary"><span>{responseCount}/6 stories added</span><div className="meter-track"><i style={{ width: `${responseCount / 6 * 100}%` }} /></div></div></section>
       <details className="bonus-card"><summary><Sparkle size={17} /> Bonus round · The fourth wall</summary><p>Each person secretly picks one extra object the other will completely misread. Reveal together. It is a win if the guesses make you laugh.</p><SelectPlayer value={ev.role} onChange={role => patchSection('evidence', { role })} label="Bonus note for" /><input value={ev.bonus?.[ev.role] || ''} onChange={e => patchSection('evidence', old => ({ bonus: { ...old.bonus, [old.role]: e.target.value } }))} placeholder="Optional: what did they think it was?" /></details>
       {footer('We told the stories')}
     </>;
@@ -183,12 +228,39 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
     const answerRows = sync.answers?.[role] || Array(10).fill('');
     const ready = ['A', 'B'].every(person => (sync.answers?.[person] || []).length === 10 && sync.answers[person].every(Boolean));
     const sameCount = ready ? SAME_PAGE.reduce((acc, _, i) => acc + (sync.answers.A[i] === sync.answers.B[i] ? 1 : 0), 0) : 0;
-    const select = (index, choice) => patchSection('samePage', old => { const rows = [...(old.answers?.[old.role] || Array(10).fill(''))]; rows[index] = choice; return { answers: { ...old.answers, [old.role]: rows }, revealed: false }; });
+    const unanswered = answerRows.findIndex(value => !value);
+    const questionIndex = Math.min(9, Math.max(0, Number.isInteger(sync.questionIndex) ? sync.questionIndex : unanswered < 0 ? 9 : unanswered));
+    const questionAnswers = SAME_PAGE[questionIndex];
+    const answerCount = answerRows.filter(Boolean).length;
+    const select = (index, choice) => patchSection('samePage', old => {
+      const rows = [...(old.answers?.[old.role] || Array(10).fill(''))];
+      rows[index] = choice;
+      const nextQuestion = rows.findIndex(value => !value);
+      return { answers: { ...old.answers, [old.role]: rows }, questionIndex: nextQuestion < 0 ? index : nextQuestion, revealed: false };
+    });
+    const handTo = next => {
+      const nextRows = sync.answers?.[next] || Array(10).fill('');
+      const nextQuestion = nextRows.findIndex(value => !value);
+      patchSection('samePage', { role: next, questionIndex: nextQuestion < 0 ? 9 : nextQuestion, revealed: false });
+    };
     const riddleReady = ['promise', 'trust', 'silence'].includes((sync.riddle || '').trim().toLowerCase());
     const recoverRiddle = () => patchSection('samePage', { riddle: 'promise' });
     return <>
       <div className="stage-intro"><p>Each person picks privately. Finish all ten, then reveal at once. No talking your way into a match.</p><div className="stage-meta"><span><Timer size={15} /> 12 minutes</span><span><Heart size={15} /> Odd answers are part of the fun</span></div></div>
-      <section className="play-panel same-page-board"><div className="panel-heading"><span className="mini-icon lilac-icon"><Sparkle size={17} /></span><div><h3>Choose in private</h3><p>Answers stay covered until both players finish.</p></div></div><SelectPlayer value={role} onChange={next => patchSection('samePage', { role: next, revealed: false })} label="Answering for"/><div className="choice-list">{SAME_PAGE.map(([first, second], index) => <div className="choice-row" key={first}><span className="choice-number">{String(index + 1).padStart(2, '0')}</span><div><button className={answerRows[index] === first ? 'choice-selected' : ''} onClick={() => select(index, first)}>{first}</button><button className={answerRows[index] === second ? 'choice-selected' : ''} onClick={() => select(index, second)}>{second}</button></div>{answerRows[index] && <Check size={15} className="choice-check" />}</div>)}</div><div className="answer-progress">{answerRows.filter(Boolean).length}/10 locked in by Player {role}<span className="answer-bar"><i style={{ width: `${answerRows.filter(Boolean).length * 10}%` }} /></span></div><div className="simultaneous-bar"><span>{ready ? `All done · ${sameCount}/10 matched` : 'Hand over the screen, then pick for Player ' + (role === 'A' ? 'B' : 'A') + '.'}</span><Button disabled={!ready} onClick={() => patchSection('samePage', { revealed: !sync.revealed })}>{sync.revealed ? 'Hide results' : 'Reveal together'}<ArrowRight size={16} /></Button></div>{sync.revealed && <div className="sync-result"><span className="sync-emoji">{sameCount >= 7 ? '✦' : sameCount >= 5 ? '♡' : '↗'}</span><div><span className="micro-label">Together, you matched</span><strong>{sameCount} of 10</strong><p>{sameCount >= 7 ? 'A mind-meld. Suspiciously efficient.' : sameCount >= 5 ? 'A few shared instincts and plenty to talk about.' : 'Two delightful cryptographic anomalies. Excellent work.'}</p></div></div>}</section>
+      <section className="same-page-board">
+        <div className="sync-board-heading"><div><span className="micro-label">A little compatibility experiment</span><h3>Follow your first thought.</h3></div><SelectPlayer value={role} onChange={handTo} label="Picking for" /></div>
+        <div className="sync-question-top"><span>QUESTION <b>{String(questionIndex + 1).padStart(2, '0')}</b> / 10</span><span>PLAYER {role} · PRIVATE PICKS</span></div>
+        <div className="sync-question-scene" key={questionIndex}>
+          <div className="sync-question-art" aria-hidden="true"><span>{SAME_PAGE_ICONS[questionIndex][0]}</span><i /><span>{SAME_PAGE_ICONS[questionIndex][1]}</span></div>
+          <span className="micro-label">GO WITH THE GUT ANSWER</span>
+          <h3>{SAME_PAGE_QUESTIONS[questionIndex]}</h3>
+          <div className="sync-choice-pair">{questionAnswers.map((choice, optionIndex) => <button type="button" key={choice} className={answerRows[questionIndex] === choice ? 'is-chosen' : ''} aria-pressed={answerRows[questionIndex] === choice} onClick={() => select(questionIndex, choice)}><span className="sync-choice-art">{SAME_PAGE_ICONS[questionIndex][optionIndex]}</span><b>{choice}</b><small>{optionIndex === 0 ? 'THE FIRST INSTINCT' : 'THE OTHER INSTINCT'}</small><ArrowRight size={16} /></button>)}</div>
+        </div>
+        <nav className="sync-question-trail" aria-label="Choose a question">{SAME_PAGE.map(([first], index) => <button type="button" key={first} className={`${index === questionIndex ? 'is-current' : ''} ${answerRows[index] ? 'is-answered' : ''}`} aria-label={`Question ${index + 1}${answerRows[index] ? ', answered' : ''}`} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => patchSection('samePage', { questionIndex: index })}>{answerRows[index] ? <Check size={12} weight="bold" /> : String(index + 1).padStart(2, '0')}</button>)}</nav>
+        <div className="sync-turn-footer"><b>{answerCount} / 10</b><span>picked by Player {role}. Their choices stay hidden.</span><i><span style={{ width: `${answerCount * 10}%` }} /></i></div>
+        <div className="simultaneous-bar"><span>{ready ? `Both finished · ${sameCount} of 10 matched` : `Hand over the screen when Player ${role} is done.`}</span><Button disabled={!ready} onClick={() => patchSection('samePage', { revealed: !sync.revealed })}>{sync.revealed ? 'Hide the reveal' : 'Reveal together'}<ArrowRight size={16} /></Button></div>
+        {sync.revealed && <div className="sync-result"><span className="sync-emoji">{sameCount >= 7 ? '✦' : sameCount >= 5 ? '♡' : '↗'}</span><div><span className="micro-label">Together, you matched</span><strong>{sameCount} of 10</strong><p>{sameCount >= 7 ? 'A mind-meld. Suspiciously efficient.' : sameCount >= 5 ? 'A few shared instincts and plenty to talk about.' : 'Two delightful cryptographic anomalies. Excellent work.'}</p></div></div>}
+      </section>
       {sync.revealed && <section className="riddle-panel"><span className="micro-label">One soft final riddle</span><h3>“I can be carried without hands. I can be shared without dividing. I can be broken without making a sound. What am I?”</h3><div className="riddle-input"><input value={sync.riddle || ''} onChange={e => patchSection('samePage', { riddle: e.target.value })} onKeyDown={e => { if (e.key === 'Enter' && riddleReady) markComplete('samePage'); }} placeholder="A small promise?"/><Button kind="berry" onClick={() => markComplete('samePage') } disabled={!riddleReady}>Unlock the last three keys</Button></div><p>If it becomes a hassle, type <button className="inline-answer" onClick={recoverRiddle}>promise</button>. Trust and silence count too.</p></section>}
       {hintBox(['It is something two people make to each other.', 'It can be kept, made, or broken.', 'Promise is the intended answer.'], 'Skip the riddle and keep the ending')}
       {footer('We solved it together')}
@@ -220,7 +292,7 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
   })}</div></details>;
 
   const stageItems = STAGES.map((item, index) => ({ ...item, locked: index === 6 && !completed.includes('samePage') }));
-  if (!state.started) return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} color="rose">
+  if (!state.started) return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="rose">
     <RouteBriefing variant="paper" nodes={BRIEFING_STOPS} tagline="A little mystery, made for two."
       number="GAME 01"
       name="The Distance Protocol"
@@ -232,8 +304,8 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
       audioSrc="/audio/rules/protocol.mp3"
       onSelectRole={role => patch({ introRole: role })}
       roles={{
-        A: { name: 'Him · Player A', summary: 'Read his private clue book. In Split Key, he starts with his own secret word list.' },
-        B: { name: 'Her · Player B', summary: 'Read her private clue book. In Split Key, she has a different secret word list.' },
+        A: { name: 'Him · Player A', summary: 'His clue book and private Split Key word list.' },
+        B: { name: 'Her · Player B', summary: 'Her clue book and private Split Key word list.' },
       }}
       steps={[
         { title: 'Choose who reads first.', text: 'His route is Player A and hers is Player B. Open the matching clue book below; keep private pages to yourself and say the clues in your own words.' },
@@ -257,9 +329,9 @@ export default function Protocol({ data, update, onBack, onLibrary, onPlayerRout
       onReadPlayerRoute={role => onPlayerRoute(role === 'A' ? '/his' : '/hers')}
     />
   </GameFrame>;
-  return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} color="rose" aside={<><PlayerLinks onPlayerRoute={onPlayerRoute} /><button className="library-shortcut" onClick={() => patch({ started: false })}><BookOpenText size={17} /> How to play</button><button className="library-shortcut" onClick={onLibrary}><BookOpenText size={17} /> Source pages</button></>}>
-    <div className="protocol-progress"><div><span className="micro-label">Your key ring</span><strong>{keys.length}<small> / 8 letters</small></strong></div><div className="earned-letters">{['split', 'message', 'evidence', 'archive', 'dixit', 'samePage'].flatMap(id => { const item = STAGES.find(s => s.id === id); return completed.includes(id) ? item.letter.split(' · ').map((letter, i) => <span key={`${id}-${i}`}>{letter}</span>) : [<span className="letter-empty" key={id}>·</span>]; })}</div><div className="protocol-progress-right"><span><Heart size={15} /> Team progress</span><span>{completed.filter(id => id !== 'vault').length}/6</span></div></div>
-    <StageRail items={stageItems} active={stageIndex} completed={completed} onSelect={goStage} />
+  return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="rose" playMode aside={<><PlayerLinks onPlayerRoute={onPlayerRoute} /><button className="library-shortcut" onClick={() => patch({ started: false })}><BookOpenText size={17} /> How to play</button><button className="library-shortcut" onClick={onLibrary}><BookOpenText size={17} /> Source pages</button></>}>
+    <div className="protocol-progress"><div><span className="micro-label">Vault letters</span><strong>{keys.length}<small>/8</small></strong></div><div className="earned-letters">{Array.from({ length: 8 }, (_, index) => keys[index] ? <span key={`key-${index}`}>{keys[index]}</span> : <span className="letter-empty" key={`empty-${index}`}>·</span>)}</div><div className="protocol-progress-right"><span><Heart size={15} /> Team progress</span><span>{completed.filter(id => id !== 'vault').length}/6</span></div></div>
+    <ChapterMenu items={stageItems} active={stageIndex} completed={completed} onSelect={goStage}/>
     <section className="stage-main"><div className="stage-heading"><div><span className="micro-label">{stage.id === 'vault' ? 'Final unlock' : `${stage.time} · one checkpoint`}</span><h2>{stage.title}</h2></div>{stage.id !== 'vault' && <div className="stage-key-pill">Key <b>{stage.letter}</b></div>}</div>{renderCurrent()}</section>
     {stage.id === 'vault' ? null : renderSidequests()}
     <p className="save-note"><Check size={14} /> Your progress saves in this browser automatically.</p>

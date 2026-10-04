@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpenText, Check, Lightbulb, LockKey, Moon, Sparkle, SpeakerHigh, Stop, Sun, Timer } from '@phosphor-icons/react';
+import { ArrowLeft, ArrowRight, BookOpenText, CaretDown, Check, DotsThree, Lightbulb, LockKey, Moon, Sparkle, SpeakerHigh, Stop, Sun, Timer } from '@phosphor-icons/react';
 
 export function Button({ children, onClick, kind = 'dark', disabled = false, type = 'button', className = '' }) {
   return <button type={type} className={`button button-${kind} ${className}`} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 
-export function ThemeToggle({ theme, onToggle }) {
+export function ThemeToggle({ theme, onToggle, className = '' }) {
   const isDark = theme === 'dark';
-  return <button className="theme-toggle" type="button" onClick={onToggle} aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`} title={`Switch to ${isDark ? 'light' : 'dark'} mode`}>
+  return <button className={`theme-toggle ${className}`} type="button" onClick={onToggle} aria-label={`Switch to ${isDark ? 'light' : 'dark'} mode`} title={`Switch to ${isDark ? 'light' : 'dark'} mode`}>
     {isDark ? <Sun size={19} weight="duotone" /> : <Moon size={19} weight="duotone" />}
     <span>{isDark ? 'Light mode' : 'Dark mode'}</span>
   </button>;
@@ -46,25 +46,18 @@ export function ReadTextButton({ text, audioSrc, className = '', label = 'Listen
     }
     readWithBrowserVoice();
   };
-  return <button type="button" className={`read-text-button ${className}`} onClick={toggle} aria-pressed={playing}>
+  return <button type="button" className={`read-text-button ${className}`} onClick={toggle} aria-label={playing ? 'Stop voice' : label} title={playing ? 'Stop voice' : label} aria-pressed={playing}>
     {playing ? <Stop size={17} weight="fill" /> : <SpeakerHigh size={18} weight="duotone" />}
     <span>{playing ? 'Stop voice' : label}</span>
   </button>;
 }
 
-export function ScreenReaderControl() {
-  const speakScreen = () => {
-    const screen = document.querySelector('.instructions-screen, .reader-page, .game-shell, .player-route-page, .library-page, .home-page');
-    return screen?.innerText || document.body.innerText;
-  };
-  return <ReadTextButton className="screen-reader-control" text={speakScreen} label="Read screen aloud" />;
-}
-
-export function GameFrame({ title, eyebrow, subtitle, icon, color = 'rose', onBack, aside, children }) {
-  return <main className={`game-shell tone-${color}`}>
+export function GameFrame({ title, eyebrow, subtitle, icon, color = 'rose', onBack, aside, playMode = false, theme, onToggleTheme, children }) {
+  return <main className={`game-shell tone-${color} ${playMode ? 'is-playing' : ''}`}>
     <div className="game-topbar">
       <button className="back-link" onClick={onBack}><ArrowLeft size={17} weight="bold" /> <span>Game shelf</span></button>
-      <div className="game-topbar-right">{aside}</div>
+      {playMode && <span className="playing-game-name">{title}</span>}
+      <div className="game-topbar-right">{aside && <details className="game-tools-menu"><summary><DotsThree size={20} weight="bold"/><span>Game menu</span><CaretDown size={13}/></summary><div className="game-tools-panel">{aside}</div></details>}<ThemeToggle theme={theme} onToggle={onToggleTheme} className="nav-theme-toggle" /></div>
     </div>
     <header className="game-heading">
       <div className="game-heading-copy">
@@ -80,7 +73,7 @@ export function GameFrame({ title, eyebrow, subtitle, icon, color = 'rose', onBa
 
 export function HintBox({ hints = [], index = 0, onReveal, recovery, onRecovery, recoveryLabel = 'Give us the key and keep going' }) {
   return <section className="hint-box">
-    <div className="hint-copy"><span className="hint-icon"><Lightbulb size={18} weight="duotone" /></span><div><strong>Need a nudge?</strong><p>{index > 0 ? hints[Math.min(index - 1, hints.length - 1)] : 'Open one gentle hint at a time. No points lost.'}</p></div></div>
+    <div className="hint-copy"><span className="hint-icon"><Lightbulb size={18} weight="duotone" /></span><div><strong>Need a nudge?</strong><p>{index > 0 ? hints[Math.min(index - 1, hints.length - 1)] : 'One hint at a time. No points lost.'}</p></div></div>
     <div className="hint-actions">
       {index < hints.length && <Button kind="quiet" onClick={onReveal}><Lightbulb size={16} /> Hint {index ? `${index + 1} of ${hints.length}` : 'me'}</Button>}
       {recovery && <Button kind="soft" onClick={onRecovery}><Sparkle size={16} /> {recoveryLabel}</Button>}

@@ -8,7 +8,7 @@ import Case from './games/Case.jsx';
 import Observatory from './games/Observatory.jsx';
 import Library from './Library.jsx';
 import PlayerRoute from './PlayerRoute.jsx';
-import { Button, ScreenReaderControl, ThemeToggle } from './components.jsx';
+import { Button, ThemeToggle } from './components.jsx';
 
 const STORAGE_KEY = 'game-club-night-v1';
 const EMPTY = {
@@ -57,7 +57,7 @@ export default function App() {
   useEffect(() => { if (path !== '/' && path !== '/his' && path !== '/hers' && path !== '/library' && !GAME_PATHS[path]) { window.history.replaceState({}, '', '/'); setPath('/'); } }, [path]);
   const navigate = destination => { window.history.pushState({}, '', destination); setPath(destination); window.scrollTo({ top: 0, behavior: 'smooth' }); };
   const openLibrary = (returnTo, documentId = 'player-pack') => { setLibraryReturn(returnTo || '/'); setLibraryDocument(documentId); navigate('/library'); };
-  const globalControls = <div className="global-controls"><ThemeToggle theme={theme} onToggle={() => setTheme(value => value === 'dark' ? 'light' : 'dark')} /><ScreenReaderControl /></div>;
+  const toggleTheme = () => setTheme(value => value === 'dark' ? 'light' : 'dark');
   const gamePlayed = useMemo(() => GAMES.filter(game => {
     const progress = session.progress?.[game.id] || {};
     return game.id === 'protocol' ? (progress.completed || []).length > 0 : game.id === 'case' ? (progress.opened || []).some(item => item.length === 1) || Boolean(progress.solved) : (progress.completed || []).length > 0;
@@ -65,7 +65,8 @@ export default function App() {
   const begin = id => navigate(`/play/${id}`);
   const updateGame = id => patcher => setSession(old => {
     const previous = old.progress?.[id] || {};
-    const next = typeof patcher === 'function' ? patcher(previous) : { ...previous, ...patcher };
+    const update = typeof patcher === 'function' ? patcher(previous) : patcher;
+    const next = { ...previous, ...(update || {}) };
     return { ...old, progress: { ...old.progress, [id]: next } };
   });
   const changeName = (role, name) => setSession(old => ({ ...old, players: { ...old.players, [role]: name.slice(0, 24) } }));
@@ -74,16 +75,16 @@ export default function App() {
     setSession(EMPTY); navigate('/'); setToast('A fresh game night is ready.'); window.setTimeout(() => setToast(''), 2500);
   };
 
-  if (path === '/his' || path === '/hers') return <><PlayerRoute role={path === '/his' ? 'A' : 'B'} players={session.players} onHome={() => navigate('/')} onLibrary={() => openLibrary(path)} onGoRoute={navigate} />{globalControls}{toast && <div className="toast-note">{toast}</div>}</>;
-  if (path === '/library') return <><Library onBack={() => navigate(libraryReturn)} initialDocument={libraryDocument} />{globalControls}{toast && <div className="toast-note">{toast}</div>}</>;
+  if (path === '/his' || path === '/hers') return <><PlayerRoute role={path === '/his' ? 'A' : 'B'} players={session.players} onHome={() => navigate('/')} onLibrary={() => openLibrary(path)} onGoRoute={navigate} theme={theme} onToggleTheme={toggleTheme} />{toast && <div className="toast-note">{toast}</div>}</>;
+  if (path === '/library') return <><Library onBack={() => navigate(libraryReturn)} initialDocument={libraryDocument} theme={theme} onToggleTheme={toggleTheme} />{toast && <div className="toast-note">{toast}</div>}</>;
   const activeGame = GAME_PATHS[path];
   if (activeGame) {
     const sourceDocument = { protocol: 'player-pack', case: 'case-pack', observatory: 'observatory-pack' }[activeGame];
-    const props = { data: session.progress?.[activeGame] || {}, update: updateGame(activeGame), onBack: () => navigate('/'), onLibrary: () => openLibrary(path, sourceDocument), onPlayerRoute: navigate };
-    return <>{activeGame === 'protocol' ? <Protocol {...props} /> : activeGame === 'case' ? <Case {...props} /> : <Observatory {...props} />}{globalControls}{toast && <div className="toast-note">{toast}</div>}</>;
+    const props = { data: session.progress?.[activeGame] || {}, update: updateGame(activeGame), onBack: () => navigate('/'), onLibrary: () => openLibrary(path, sourceDocument), onPlayerRoute: navigate, theme, onToggleTheme: toggleTheme };
+    return <>{activeGame === 'protocol' ? <Protocol {...props} /> : activeGame === 'case' ? <Case {...props} /> : <Observatory {...props} />}{toast && <div className="toast-note">{toast}</div>}</>;
   }
   return <div className="home-page" id="top">
-    <nav className="site-nav"><a className="brandmark" href="#top" aria-label="Game Club home"><span className="brand-heart">✳</span><span>game<span>club</span></span></a><div className="nav-links"><a href="#games">The games</a><a href="#how-it-works">How it works</a><button onClick={() => navigate('/his')}>His route · A</button><button onClick={() => navigate('/hers')}>Her route · B</button><button onClick={() => openLibrary('/') }><BookOpenText size={16} /> Source library</button></div><button className="saved-progress" onClick={() => setNamesEditing(v => !v)}><span className="saved-avatar"><UserCircle size={18} /></span><span>Your team</span><span className="team-progress-dot">{gamePlayed}</span></button></nav>
+    <nav className="site-nav"><a className="brandmark" href="#top" aria-label="Game Club home"><span className="brand-heart">✳</span><span>game<span>club</span></span></a><div className="nav-links"><a href="#games">The games</a><a href="#how-it-works">How it works</a><button onClick={() => navigate('/his')}>His route · A</button><button onClick={() => navigate('/hers')}>Her route · B</button><button onClick={() => openLibrary('/') }><BookOpenText size={16} /> Source library</button></div><ThemeToggle theme={theme} onToggle={toggleTheme} className="nav-theme-toggle" /><button className="saved-progress" onClick={() => setNamesEditing(v => !v)}><span className="saved-avatar"><UserCircle size={18} /></span><span>Your team</span><span className="team-progress-dot">{gamePlayed}</span></button></nav>
 
     <main>
       <section className="hero-section">
@@ -113,6 +114,5 @@ export default function App() {
     </main>
     <footer className="site-footer"><a className="brandmark" href="#top"><span className="brand-heart">✳</span><span>game<span>club</span></span></a><p>Made for two people on the same side.</p><button onClick={reset}><span>Reset this browser’s progress</span></button><span className="footer-note">Your clues stay in this browser. Nothing syncs or uploads.</span></footer>
     {toast && <div className="toast-note"><Check size={15} /> {toast}</div>}
-    {globalControls}
   </div>;
 }
