@@ -9,7 +9,7 @@ npm install
 npm run dev
 ```
 
-The player routes are `/his` for Player A and `/hers` for Player B. Both have separate clue books, progressive hints, and a read-aloud button. The game routes are `/play/protocol`, `/play/case`, and `/play/observatory`. `/library` contains the page-by-page player packs, private cards, and host guides.
+The player routes are `/his` for Player A and `/hers` for Player B. Both have separate clue books, progressive hints, and read-aloud buttons. Each game opens with its complete rules, a His/Her role picker, and a clear start button. `/library` contains the page-by-page player packs, private cards, and host guides, with a speaker button on each page. The site also has a persistent light/dark mode switch and a read-the-current-screen control. Voice playback uses the browser's built-in speech voice; no audio is uploaded.
 
 ## Build and deploy
 
@@ -17,7 +17,7 @@ The player routes are `/his` for Player A and `/hers` for Player B. Both have se
 npm run build
 ```
 
-Import this repository into Vercel and use the default Vite settings. The included `vercel.json` sends direct visits to the player routes back through the app.
+Import this repository into Vercel and use the default Vite settings. The included `vercel.json` sends direct visits to the player routes back through the app. You can also deploy from a signed-in Vercel CLI with `vercel deploy --prod`.
 
 ## How progress and privacy work
 

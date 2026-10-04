@@ -19,7 +19,8 @@ export function ReadTextButton({ text, className = '', label = 'Listen to this' 
   const toggle = () => {
     if (!('speechSynthesis' in window)) return;
     if (playing) { window.speechSynthesis.cancel(); setPlaying(false); return; }
-    const utterance = new SpeechSynthesisUtterance(text || 'There is no text to read on this screen.');
+    const currentText = typeof text === 'function' ? text() : text;
+    const utterance = new SpeechSynthesisUtterance(currentText || 'There is no text to read on this screen.');
     utterance.rate = 0.88;
     utterance.pitch = 0.98;
     const voices = window.speechSynthesis.getVoices();
@@ -43,7 +44,7 @@ export function ScreenReaderControl() {
     const screen = document.querySelector('.instructions-screen, .reader-page, .game-shell, .player-route-page, .library-page, .home-page');
     return screen?.innerText || document.body.innerText;
   };
-  return <ReadTextButton className="screen-reader-control" text={speakScreen()} label="Read screen aloud" />;
+  return <ReadTextButton className="screen-reader-control" text={speakScreen} label="Read screen aloud" />;
 }
 
 export function GameFrame({ title, eyebrow, subtitle, icon, color = 'rose', onBack, aside, children }) {
