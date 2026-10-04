@@ -1,0 +1,90 @@
+/* Each world owns its palette in both themes; kit components read these tokens. */
+.world {
+  --glass: color-mix(in srgb, var(--surface) 84%, transparent);
+  --grade: linear-gradient(180deg, color-mix(in srgb, var(--bg-deep) 55%, transparent) 0%, color-mix(in srgb, var(--bg-deep) 20%, transparent) 30%, color-mix(in srgb, var(--bg-deep) 70%, transparent) 100%);
+  color: var(--ink); background: var(--bg-deep); min-height: 100svh;
+}
+.world-protocol {
+  color-scheme: light;
+  --bg: #f4ead9; --bg-deep: #e9d8bd; --surface: #fbf4e7; --surface-2: #f3e7d2; --surface-3: #ead9bd;
+  --line: #e0cdae; --line-strong: #c9ab80; --ink: #3a2a26; --ink-2: #6b5548; --ink-3: #8f7663;
+  --tone: #c2475f; --tone-soft: #f6dcd9; --on-accent: #fff; --amber: #b9752a; --good: #3f7d55; --warn: #b5532f;
+  --shadow-2: 0 2px 6px rgba(70, 40, 20, .1), 0 22px 50px rgba(70, 40, 20, .18);
+}
+.world-case {
+  color-scheme: dark;
+  --bg: #16110f; --bg-deep: #0c0908; --surface: #221a17; --surface-2: #2b211d; --surface-3: #352823;
+  --line: #43342d; --line-strong: #5d473d; --ink: #f1e6dc; --ink-2: #cbb9aa; --ink-3: #9a8576;
+  --tone: #e2564f; --tone-soft: #3f1d1b; --on-accent: #fff6f2; --amber: #e8b36a; --good: #8fd3a6; --warn: #f0a07a;
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.world-observatory {
+  color-scheme: dark;
+  --bg: #0b1222; --bg-deep: #050913; --surface: #121c33; --surface-2: #18243f; --surface-3: #1f2e4d;
+  --line: #26375a; --line-strong: #375081; --ink: #e8eefc; --ink-2: #b4c1de; --ink-3: #8090b3;
+  --tone: #7fd3e8; --tone-soft: #16314a; --on-accent: #06121c; --amber: #f2c46f; --good: #8fe0b0; --warn: #f4a37f;
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.world-musicbox {
+  color-scheme: dark;
+  --bg: #1c130c; --bg-deep: #110b06; --surface: #2a1d13; --surface-2: #332417; --surface-3: #3e2c1c;
+  --line: #4d3824; --line-strong: #6e5233; --ink: #f6e9d6; --ink-2: #d6bfa0; --ink-3: #a68b6a;
+  --tone: #f0b45c; --tone-soft: #46301a; --on-accent: #1f1408; --amber: #f0b45c; --good: #a8d99a; --warn: #f19b78;
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.world-maze {
+  color-scheme: dark;
+  --bg: #0d1a16; --bg-deep: #07100d; --surface: #13241e; --surface-2: #192e26; --surface-3: #203a30;
+  --line: #29453a; --line-strong: #3b6152; --ink: #e6f2ea; --ink-2: #b5cdbf; --ink-3: #82a092;
+  --tone: #f3c86a; --tone-soft: #2e3320; --on-accent: #1b1406; --amber: #f3c86a; --good: #8fe0b0; --warn: #f4a37f;
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.world-train {
+  color-scheme: dark;
+  --bg: #11122a; --bg-deep: #090a1a; --surface: #1a1c3a; --surface-2: #212447; --surface-3: #2a2d55;
+  --line: #333766; --line-strong: #4a4f8a; --ink: #efeafb; --ink-2: #c4bfe0; --ink-3: #908bb6;
+  --tone: #f19bb0; --tone-soft: #3d2340; --on-accent: #22101a; --amber: #e8bf72; --good: #8fe0b0; --warn: #f4a37f;
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .4), 0 24px 60px rgba(0, 0, 0, .55);
+}
+.world-herbarium {
+  color-scheme: light;
+  --bg: #f1eedf; --bg-deep: #e2e2cc; --surface: #fbf9f0; --surface-2: #f2efe0; --surface-3: #e7e4cf;
+  --line: #ddd9c2; --line-strong: #bfb995; --ink: #2f3326; --ink-2: #5e634c; --ink-3: #848a6c;
+  --tone: #5d8545; --tone-soft: #e1ecd3; --on-accent: #fff; --amber: #b9752a; --good: #3f7d55; --warn: #b5532f;
+  --shadow-2: 0 2px 6px rgba(50, 60, 30, .1), 0 22px 50px rgba(50, 60, 30, .18);
+}
+
+/* Scene layers */
+.world-scene { position: fixed; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; background: var(--bg-deep); }
+.world-art { position: absolute; inset: -4%; }
+.world-art img { width: 100%; height: 100%; object-fit: cover; animation: world-drift 46s ease-in-out infinite alternate, world-in 1.6s var(--ease) both; }
+.world-layer { position: absolute; inset: 0; }
+.world-grade { position: absolute; inset: 0; background: var(--grade), radial-gradient(ellipse at 50% 40%, transparent 30%, color-mix(in srgb, var(--bg-deep) 75%, transparent) 100%); }
+@keyframes world-drift { from { transform: scale(1.06) translate(0, 0); } to { transform: scale(1.14) translate(-1.5%, -1%); } }
+@keyframes world-in { from { opacity: 0; filter: blur(12px); transform: scale(1.25); } }
+
+/* Glass UI floating over the scene */
+.world .game-bar { max-width: none; background: transparent; backdrop-filter: none; padding: 14px clamp(12px, 3vw, 28px); }
+.world .game-bar .icon-btn, .world .role-chip { background: var(--glass); backdrop-filter: blur(14px) saturate(1.3); border-color: color-mix(in srgb, var(--line-strong) 60%, transparent); }
+.world .game-bar-title { padding: 4px 14px; border-radius: 999px; justify-self: start; }
+.world .game-bar-title b { text-shadow: 0 1px 12px var(--bg-deep); }
+.world .game-main { max-width: 1040px; padding-top: clamp(8px, 4vh, 40px); }
+.world .round, .world .finale, .world .round-progress {
+  background: var(--glass); backdrop-filter: blur(18px) saturate(1.25); -webkit-backdrop-filter: blur(18px) saturate(1.25);
+  border-color: color-mix(in srgb, var(--line-strong) 55%, transparent);
+}
+.world .round-progress { border: 1px solid color-mix(in srgb, var(--line-strong) 55%, transparent); border-radius: 999px; padding: 6px; justify-self: center; max-width: 100%; }
+.world .round { box-shadow: var(--shadow-2), inset 0 1px 0 color-mix(in srgb, #fff 10%, transparent); }
+.world .btn.btn-primary { color: var(--on-accent); }
+.world .rp-step.is-done .rp-dot { color: var(--on-accent); }
+
+/* Entry portal */
+.world-portal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 24px; background: var(--bg-deep); cursor: pointer; overflow: hidden; }
+.world-portal-art { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: .55; filter: saturate(1.15); animation: portal-push 2.4s var(--ease) both; }
+.world-portal::after { content: ''; position: absolute; inset: 0; background: radial-gradient(ellipse at center, color-mix(in srgb, var(--bg-deep) 40%, transparent), var(--bg-deep) 85%); }
+.world-portal-copy { position: relative; z-index: 1; display: grid; gap: 14px; justify-items: center; text-align: center; max-width: 720px; }
+.world-portal-copy .micro { color: var(--tone); }
+.world-portal-copy h1 { font-size: clamp(44px, 11vw, 112px); color: var(--ink); }
+.world-portal-copy p { font-size: clamp(16px, 2.6vw, 20px); color: var(--ink-2); }
+.world-portal-line { position: absolute; z-index: 1; left: 0; right: 0; bottom: 0; height: 3px; background: var(--tone); transform-origin: left; }
+@keyframes portal-push { from { transform: scale(1.3); } to { transform: scale(1.05); } }

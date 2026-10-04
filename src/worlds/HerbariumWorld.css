@@ -1,0 +1,166 @@
+.w-herbarium-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.w-herbarium-light-depth,
+.w-herbarium-petal-depth {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.w-herbarium-light-depth {
+  inset: -10%;
+}
+
+.w-herbarium-sun-wash {
+  position: absolute;
+  inset: 0;
+  opacity: .27;
+  background:
+    radial-gradient(ellipse at 5% 18%, rgba(255, 235, 183, .48), transparent 38%),
+    linear-gradient(118deg, rgba(237, 214, 158, .08), transparent 48%);
+  animation: w-herbarium-glow 11s ease-in-out infinite alternate;
+}
+
+.w-herbarium-light-ray {
+  position: absolute;
+  top: -20%;
+  left: 1%;
+  width: min(46vw, 680px);
+  height: 130%;
+  transform: rotate(17deg) skewX(-12deg);
+  transform-origin: top left;
+  opacity: .1;
+  background: linear-gradient(90deg, rgba(255, 231, 174, .32), rgba(255, 231, 174, .08) 22%, transparent 78%);
+  animation: w-herbarium-ray-drift 13s ease-in-out infinite alternate;
+}
+
+.w-herbarium-ray-two {
+  left: 12%;
+  width: min(22vw, 330px);
+  opacity: .07;
+  animation-delay: -6s;
+}
+
+.w-herbarium-botanical,
+.w-herbarium-dust-field {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.w-herbarium-branch-line {
+  fill: none;
+  stroke: #526447;
+  stroke-width: 5;
+  stroke-linecap: round;
+  opacity: .28;
+}
+
+.w-herbarium-leaf {
+  fill: #60734e;
+  stroke: #465d42;
+  stroke-width: 2;
+  opacity: .2;
+}
+
+.w-herbarium-blossom {
+  fill: #ba7180;
+  stroke: #8d6265;
+  opacity: .19;
+}
+
+.w-herbarium-leaf-sway {
+  transform-box: fill-box;
+  transform-origin: left top;
+  animation: w-herbarium-sway 7s ease-in-out infinite alternate;
+}
+
+.w-herbarium-branch-bottom-right {
+  transform-origin: right bottom;
+  animation-delay: -3s;
+}
+
+.w-herbarium-dust {
+  fill: #f7e7c0;
+  opacity: .22;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: w-herbarium-dust-drift 6s ease-in-out infinite alternate;
+}
+
+.w-herbarium-petal-anchor {
+  position: absolute;
+  top: -7%;
+  width: 24px;
+  height: 34px;
+}
+
+.w-herbarium-petal-flight {
+  display: block;
+  width: clamp(10px, 1.05vw, 17px);
+  height: auto;
+  opacity: .8;
+  transform-origin: center;
+  animation: w-herbarium-fall var(--w-herbarium-fall-duration, 17s) linear infinite;
+  animation-delay: var(--w-herbarium-fall-delay, 0s);
+}
+
+@keyframes w-herbarium-glow {
+  from { opacity: .17; }
+  to { opacity: .34; }
+}
+
+@keyframes w-herbarium-ray-drift {
+  from { transform: translate3d(-4px, 0, 0) rotate(17deg) skewX(-12deg); opacity: .07; }
+  to { transform: translate3d(15px, 0, 0) rotate(19deg) skewX(-12deg); opacity: .14; }
+}
+
+@keyframes w-herbarium-sway {
+  from { transform: rotate(-1.4deg); }
+  to { transform: rotate(1.4deg); }
+}
+
+@keyframes w-herbarium-dust-drift {
+  from { opacity: .1; transform: translate3d(0, 3px, 0) scale(.7); }
+  to { opacity: .46; transform: translate3d(2px, -8px, 0) scale(1.25); }
+}
+
+@keyframes w-herbarium-fall {
+  from { transform: translate3d(0, -4vh, 0) rotate(-15deg); }
+  to { transform: translate3d(20px, 112vh, 0) rotate(205deg); }
+}
+
+.w-herbarium-scene.w-herbarium-is-reduced .w-herbarium-sun-wash,
+.w-herbarium-scene.w-herbarium-is-reduced .w-herbarium-light-ray,
+.w-herbarium-scene.w-herbarium-is-reduced .w-herbarium-leaf-sway,
+.w-herbarium-scene.w-herbarium-is-reduced .w-herbarium-dust,
+.w-herbarium-scene.w-herbarium-is-reduced .w-herbarium-petal-flight {
+  animation: none;
+}
+
+@media (max-width: 600px) {
+  .w-herbarium-leaf { opacity: .15; }
+  .w-herbarium-branch-line { opacity: .2; }
+  .w-herbarium-petal-anchor { width: 18px; }
+  .w-herbarium-petal-flight { width: 11px; }
+  .w-herbarium-light-ray { width: 55vw; opacity: .07; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-herbarium-sun-wash,
+  .w-herbarium-light-ray,
+  .w-herbarium-leaf-sway,
+  .w-herbarium-dust,
+  .w-herbarium-petal-flight {
+    animation: none;
+  }
+}

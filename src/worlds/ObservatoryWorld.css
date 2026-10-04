@@ -1,0 +1,237 @@
+.w-observatory-scene {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  isolation: isolate;
+  pointer-events: none;
+}
+
+.w-observatory-edge-glow {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 82% 2%, rgba(88, 198, 231, .14), transparent 29%),
+    radial-gradient(ellipse at 0% 48%, rgba(40, 110, 148, .12), transparent 34%),
+    radial-gradient(ellipse at 100% 78%, rgba(42, 129, 161, .1), transparent 28%),
+    linear-gradient(180deg, rgba(3, 8, 20, .14), transparent 24%, transparent 76%, rgba(3, 7, 16, .22));
+}
+
+.w-observatory-depth {
+  position: absolute;
+  inset: -1.5%;
+  will-change: transform;
+}
+
+.w-observatory-stars {
+  position: absolute;
+  inset: 0;
+}
+
+.w-observatory-star {
+  position: absolute;
+  width: var(--w-observatory-star-size);
+  height: var(--w-observatory-star-size);
+  border-radius: 50%;
+  background: #c4f3ff;
+  box-shadow: 0 0 7px rgba(127, 211, 232, .74);
+  opacity: .62;
+  transform: translate(-50%, -50%);
+}
+
+.w-observatory-star-twinkle {
+  animation: w-observatory-twinkle 3.8s ease-in-out var(--w-observatory-star-delay) infinite;
+}
+
+.w-observatory-constellation {
+  position: absolute;
+  top: 5%;
+  left: 0;
+  width: clamp(260px, 34vw, 470px);
+  height: clamp(128px, 20vh, 240px);
+  overflow: visible;
+  opacity: .27;
+}
+
+.w-observatory-constellation path,
+.w-observatory-orbit-trace path {
+  stroke: var(--tone, #7fd3e8);
+  stroke-width: .7;
+  stroke-dasharray: 2 5;
+}
+
+.w-observatory-constellation circle,
+.w-observatory-orbit-trace circle {
+  fill: var(--tone, #7fd3e8);
+}
+
+.w-observatory-orbit-trace {
+  position: absolute;
+  left: -4%;
+  bottom: 0;
+  width: clamp(230px, 28vw, 390px);
+  height: clamp(135px, 20vh, 220px);
+  opacity: .24;
+}
+
+.w-observatory-orbit-trace svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.w-observatory-dome-shaft {
+  position: absolute;
+  top: -2%;
+  right: 3%;
+  width: clamp(170px, 23vw, 380px);
+  height: 59%;
+  background: linear-gradient(180deg, rgba(99, 219, 245, .19), rgba(78, 186, 225, .09) 48%, transparent 100%);
+  clip-path: polygon(42% 0, 57% 0, 100% 100%, 0 100%);
+  opacity: .76;
+}
+
+.w-observatory-dome-shaft::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  background: radial-gradient(ellipse at 50% 5%, rgba(169, 241, 255, .4), transparent 55%);
+  animation: w-observatory-shaft-breathe 7s ease-in-out infinite;
+}
+
+.w-observatory-astrolabe {
+  position: absolute;
+  top: -7%;
+  right: -4%;
+  width: clamp(175px, 21vw, 310px);
+  aspect-ratio: 1;
+  color: var(--amber, #f2c46f);
+  opacity: .38;
+  filter: drop-shadow(0 0 16px rgba(242, 196, 111, .1));
+}
+
+.w-observatory-astrolabe svg {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.w-observatory-astrolabe-outer {
+  transform-origin: 140px 140px;
+  animation: w-observatory-rotate 140s linear infinite;
+}
+
+.w-observatory-astrolabe-inner {
+  transform-origin: 140px 140px;
+  animation: w-observatory-rotate-back 110s linear infinite;
+}
+
+.w-observatory-astrolabe circle,
+.w-observatory-astrolabe ellipse,
+.w-observatory-astrolabe path {
+  stroke: currentColor;
+  stroke-width: 1.1;
+  vector-effect: non-scaling-stroke;
+}
+
+.w-observatory-astrolabe-star {
+  fill: var(--tone, #7fd3e8);
+  stroke: none !important;
+  filter: drop-shadow(0 0 7px rgba(127, 211, 232, .9));
+}
+
+.w-observatory-comet-entry {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.w-observatory-comet {
+  position: absolute;
+  top: 11%;
+  left: 87%;
+  width: 154px;
+  height: 2px;
+  transform-origin: right center;
+  transform: rotate(24deg);
+  background: linear-gradient(90deg, transparent, rgba(123, 225, 248, .08) 24%, rgba(176, 246, 255, .96));
+  box-shadow: 0 0 9px rgba(119, 222, 247, .84);
+  opacity: 0;
+  animation: w-observatory-shooting-star 12s linear 1.6s infinite;
+}
+
+.w-observatory-static .w-observatory-star-twinkle,
+.w-observatory-static .w-observatory-dome-shaft::after,
+.w-observatory-static .w-observatory-astrolabe-outer,
+.w-observatory-static .w-observatory-astrolabe-inner,
+.w-observatory-static .w-observatory-comet {
+  animation: none !important;
+}
+
+@keyframes w-observatory-twinkle {
+  0%, 100% { opacity: .3; transform: translate(-50%, -50%) scale(.75); }
+  48% { opacity: .95; transform: translate(-50%, -50%) scale(1.45); }
+}
+
+@keyframes w-observatory-shaft-breathe {
+  0%, 100% { opacity: .32; }
+  50% { opacity: .82; }
+}
+
+@keyframes w-observatory-rotate {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes w-observatory-rotate-back {
+  to { transform: rotate(-360deg); }
+}
+
+@keyframes w-observatory-shooting-star {
+  0%, 86%, 100% { opacity: 0; transform: translate3d(0, 0, 0) rotate(24deg); }
+  88% { opacity: .95; }
+  93% { opacity: 0; transform: translate3d(-150px, 86px, 0) rotate(24deg); }
+}
+
+@media (max-width: 700px) {
+  .w-observatory-edge-glow {
+    background:
+      radial-gradient(ellipse at 84% 0%, rgba(88, 198, 231, .13), transparent 25%),
+      radial-gradient(ellipse at 0% 42%, rgba(40, 110, 148, .1), transparent 31%),
+      radial-gradient(ellipse at 100% 80%, rgba(42, 129, 161, .1), transparent 24%);
+  }
+
+  .w-observatory-astrolabe {
+    top: -2%;
+    right: -21%;
+    width: 190px;
+    opacity: .34;
+  }
+
+  .w-observatory-dome-shaft {
+    top: 0;
+    right: 0;
+    width: 46vw;
+    height: 35%;
+    opacity: .62;
+  }
+
+  .w-observatory-constellation {
+    top: 7%;
+    left: -12%;
+    width: 75vw;
+    height: 16vh;
+    opacity: .22;
+  }
+
+  .w-observatory-orbit-trace {
+    left: -22%;
+    bottom: 1%;
+    width: 72vw;
+    height: 15vh;
+  }
+
+  .w-observatory-comet {
+    top: 15%;
+    left: 82%;
+  }
+}

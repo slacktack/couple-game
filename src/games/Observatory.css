@@ -1,0 +1,172 @@
+/* Round shell + ambient sky */
+.obs-round { overflow: hidden; isolation: isolate; }
+.obs-round > :not(.obs-sky) { position: relative; z-index: 1; }
+.obs-sky { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.obs-sky i { position: absolute; border-radius: 50%; background: var(--ink); opacity: .3; box-shadow: 0 0 6px color-mix(in srgb, var(--tone) 70%, transparent); animation: twinkle 3.6s ease-in-out infinite; }
+.obs-stage { position: relative; }
+
+/* Shared board surface: a dark star-chart plate */
+.obs-chart, .obs-receiver, .obs-panel, .obs-wheel, .obs-vault, .obs-map {
+  position: relative; overflow: hidden; border-radius: 22px 30px 22px 30px;
+  border: 1px solid color-mix(in srgb, var(--tone) 28%, var(--line));
+  background:
+    radial-gradient(ellipse at 80% 0%, color-mix(in srgb, var(--tone) 18%, transparent), transparent 55%),
+    linear-gradient(160deg, color-mix(in srgb, var(--bg-deep) 70%, transparent), color-mix(in srgb, var(--surface) 85%, transparent)),
+    url('/game-art/observatory-night-sky.jpg') center / cover;
+  box-shadow: inset 0 0 40px color-mix(in srgb, var(--tone) 8%, transparent), 0 14px 34px rgba(0, 0, 0, .3);
+}
+
+/* Lock 01 · star chart */
+.obs-chart { padding: clamp(10px, 3vw, 18px); }
+.obs-chart svg { width: 100%; height: auto; overflow: visible; }
+.obs-const { cursor: pointer; outline: none; }
+.obs-const-hit { fill: transparent; stroke: transparent; transition: fill .3s, stroke .3s; }
+.obs-const:hover .obs-const-hit, .obs-const:focus-visible .obs-const-hit { fill: color-mix(in srgb, var(--tone) 7%, transparent); stroke: color-mix(in srgb, var(--tone) 30%, transparent); }
+.obs-const.is-pinned .obs-const-hit { fill: color-mix(in srgb, var(--tone) 12%, transparent); stroke: color-mix(in srgb, var(--tone) 55%, transparent); }
+.obs-const-ghost { fill: none; stroke: color-mix(in srgb, var(--tone) 35%, transparent); stroke-width: .8; stroke-dasharray: 2 3; }
+.obs-const-line { fill: none; stroke: var(--tone); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; filter: drop-shadow(0 0 3px var(--tone)); }
+.obs-const-star { fill: #e9fbff; filter: drop-shadow(0 0 3px #9fe6f7); animation: twinkle 3.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.obs-const-num { font: 500 8px var(--mono); fill: var(--ink-3); }
+.obs-const-name { font: 500 10px var(--mono); letter-spacing: .14em; fill: var(--ink-2); transition: fill .3s; }
+.obs-const.is-lit .obs-const-name { fill: var(--ink); }
+.obs-pin { fill: var(--amber); filter: drop-shadow(0 0 4px var(--amber)); }
+
+/* Lock 02 · mirror receiver */
+.obs-receiver { display: grid; justify-items: center; gap: 12px; padding: 20px 14px 22px; }
+.obs-orbit { position: absolute; right: -26px; top: -24px; width: 140px; opacity: .8; pointer-events: none; }
+.obs-orbit-planet { fill: color-mix(in srgb, var(--tone) 35%, var(--surface-2)); stroke: var(--tone); stroke-width: 1; }
+.obs-orbit-ring { fill: none; stroke: color-mix(in srgb, var(--tone) 55%, transparent); stroke-width: 1; }
+.obs-orbit-ring.is-faint { stroke-dasharray: 2 4; opacity: .6; }
+.obs-orbit-spin { transform-origin: 60px 60px; animation: spin 9s linear infinite; }
+.obs-orbit-comet { fill: #effcff; filter: drop-shadow(0 0 4px #9fe6f7); }
+.obs-orbit-tail { fill: none; stroke: #bff2ff; stroke-width: 1.4; stroke-linecap: round; opacity: .5; }
+.obs-receiver-label { justify-self: start; color: var(--tone); }
+.obs-glass-stage { perspective: 900px; width: 100%; display: grid; place-items: center; padding: 6px 0; }
+.obs-glass {
+  position: relative; width: min(100%, 460px); min-height: 92px; border: 0; padding: 0; background: none;
+  transform-style: preserve-3d; cursor: pointer;
+}
+.obs-glass-face {
+  position: absolute; inset: 0; display: grid; place-items: center; padding: 10px 12px; backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border-radius: 14px 22px 14px 22px; border: 1px solid color-mix(in srgb, var(--tone) 55%, transparent);
+  background: linear-gradient(115deg, color-mix(in srgb, var(--tone) 22%, transparent), color-mix(in srgb, var(--surface) 70%, transparent) 40%, color-mix(in srgb, var(--tone) 12%, transparent));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .18), 0 10px 26px rgba(0, 0, 0, .35);
+}
+.obs-glass-face::after { content: ''; position: absolute; inset: 0; border-radius: inherit; background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, .16) 45%, transparent 60%); background-size: 260% 100%; animation: obs-sheen 4.5s ease-in-out infinite; pointer-events: none; }
+.obs-glass-face.is-back { transform: rotateY(180deg); }
+.obs-glass-face > span { display: flex; flex-wrap: wrap; justify-content: center; font: 600 clamp(17px, 5.2vw, 26px) var(--mono); letter-spacing: .14em; color: var(--ink); text-shadow: 0 0 14px color-mix(in srgb, var(--tone) 60%, transparent); }
+.obs-glass-face > span > span { display: inline-block; animation: obs-flicker 3.4s ease-in-out infinite; }
+.obs-mirrored { transform: scaleX(-1); }
+@keyframes obs-sheen { 0%, 100% { background-position: 120% 0; } 50% { background-position: -20% 0; } }
+@keyframes obs-flicker { 0%, 100% { opacity: 1; } 48% { opacity: .55; } 52% { opacity: 1; } }
+
+/* Lock 03 · switchboard */
+.obs-panel { display: grid; gap: 14px; padding: 16px clamp(12px, 3vw, 20px) 18px; }
+.obs-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.obs-panel-head .micro { color: var(--tone); }
+.obs-readout { display: inline-flex; gap: 6px; min-height: 34px; align-items: center; padding: 4px 12px; border-radius: 10px; background: color-mix(in srgb, var(--bg-deep) 80%, transparent); border: 1px solid var(--line); font: 600 16px var(--mono); color: var(--good); text-shadow: 0 0 10px color-mix(in srgb, var(--good) 60%, transparent); }
+.obs-readout i { font: italic 500 13px var(--mono); color: var(--ink-3); text-shadow: none; }
+.obs-bus { position: relative; height: 6px; border-radius: 6px; background: color-mix(in srgb, var(--ink-3) 25%, transparent); overflow: hidden; }
+.obs-bus-fill { position: absolute; inset: 0; transform-origin: left; border-radius: inherit; background: linear-gradient(90deg, var(--tone), var(--good)); box-shadow: 0 0 12px var(--good); }
+.obs-panel.is-closed .obs-bus-fill { animation: obs-hum 1.4s ease-in-out infinite; }
+@keyframes obs-hum { 50% { opacity: .6; } }
+.obs-switches { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: clamp(6px, 2vw, 12px); }
+.obs-switch {
+  position: relative; display: grid; justify-items: center; gap: 8px; min-width: 0; padding: 12px 4px 10px; border-radius: 14px 18px 14px 18px;
+  border: 1px solid var(--line); background: linear-gradient(180deg, var(--surface-3), var(--surface)); color: var(--ink-2);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 6px 14px rgba(0, 0, 0, .25);
+  transition: border-color .25s, box-shadow .3s;
+}
+.obs-switch:active { transform: scale(.95); }
+.obs-switch.is-on { border-color: color-mix(in srgb, var(--good) 60%, var(--line)); color: var(--ink); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), 0 0 22px color-mix(in srgb, var(--good) 25%, transparent); }
+.obs-wire { position: absolute; top: -15px; left: 50%; width: 2px; height: 15px; background: color-mix(in srgb, var(--ink-3) 35%, transparent); transition: background .3s, box-shadow .3s; }
+.obs-switch.is-on .obs-wire { background: var(--good); box-shadow: 0 0 8px var(--good); }
+.obs-lamp { width: 12px; height: 12px; border-radius: 50%; background: color-mix(in srgb, var(--ink-3) 40%, var(--surface)); transition: background .25s, box-shadow .25s; }
+.obs-switch.is-on .obs-lamp { background: var(--good); box-shadow: 0 0 12px 3px color-mix(in srgb, var(--good) 70%, transparent); }
+.obs-slot { position: relative; display: grid; place-items: center; width: 26px; height: 52px; border-radius: 13px; background: color-mix(in srgb, var(--bg-deep) 85%, transparent); box-shadow: inset 0 2px 6px rgba(0, 0, 0, .5); }
+.obs-lever { position: absolute; bottom: 50%; left: 50%; width: 6px; height: 26px; margin-left: -3px; border-radius: 3px; transform-origin: 50% 100%; background: linear-gradient(90deg, #8a97b4, #dfe6f5, #8a97b4); }
+.obs-lever i { position: absolute; top: -7px; left: 50%; width: 16px; height: 16px; margin-left: -8px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #fff, #b9c4dc 55%, #6d7894); box-shadow: 0 2px 4px rgba(0, 0, 0, .4); }
+.obs-switch.is-on .obs-lever i { background: radial-gradient(circle at 35% 35%, #fff, var(--good) 60%, #2c6b4a); }
+.obs-switch b { font: 600 15px var(--mono); }
+
+/* Lock 04 · cipher wheel */
+.obs-wheel { display: grid; justify-items: center; gap: 12px; padding: 16px 12px 14px; }
+.obs-wheel-svg { width: min(100%, 340px); height: auto; touch-action: none; user-select: none; -webkit-user-select: none; }
+.obs-wheel-rim { fill: color-mix(in srgb, var(--bg-deep) 70%, transparent); stroke: color-mix(in srgb, var(--amber) 55%, transparent); stroke-width: 2; }
+.obs-wheel-hit { fill: transparent; fill-rule: evenodd; cursor: pointer; }
+.obs-wheel-out, .obs-wheel-in { text-anchor: middle; dominant-baseline: central; font: 600 13px var(--mono); pointer-events: none; transition: fill .25s; }
+.obs-wheel-out { fill: var(--amber); }
+.obs-wheel-in { fill: var(--ink-2); font-size: 12px; }
+.obs-wheel-out.is-picked, .obs-wheel-in.is-picked { fill: #fff; filter: drop-shadow(0 0 4px var(--tone)); font-size: 15px; }
+.obs-wheel-beam { stroke: var(--tone); stroke-width: 22; stroke-linecap: round; opacity: .22; pointer-events: none; }
+.obs-wheel-disc { cursor: grab; }
+.obs-wheel-disc:active { cursor: grabbing; }
+.obs-wheel-plate { fill: color-mix(in srgb, var(--surface-3) 92%, transparent); stroke: color-mix(in srgb, var(--tone) 50%, transparent); stroke-width: 1.5; }
+.obs-wheel-tick { stroke: color-mix(in srgb, var(--tone) 30%, transparent); stroke-width: .8; }
+.obs-wheel-inner { fill: color-mix(in srgb, var(--bg-deep) 60%, transparent); stroke: color-mix(in srgb, var(--tone) 30%, transparent); stroke-dasharray: 3 4; }
+.obs-wheel-star { fill: var(--tone); opacity: .7; }
+.obs-wheel-hub circle { fill: var(--surface); stroke: var(--amber); stroke-width: 1.5; }
+.obs-wheel-hub-label { text-anchor: middle; font: 500 8px var(--mono); letter-spacing: .2em; fill: var(--ink-3); }
+.obs-wheel-hub-num { text-anchor: middle; font: 700 24px var(--sans); fill: var(--ink); }
+.obs-wheel-turn { display: flex; align-items: center; gap: 14px; }
+.obs-turn { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; border: 1px solid var(--line-strong); background: var(--surface-2); color: var(--ink); box-shadow: 0 6px 14px rgba(0, 0, 0, .3); }
+.obs-cipher-text { font: 600 26px var(--mono); letter-spacing: .3em; color: var(--tone); }
+
+/* Lock 05 · vault destinations */
+.obs-vault { display: grid; gap: 14px; padding: 18px clamp(12px, 3vw, 22px) 20px; }
+.obs-vault .micro { color: var(--tone); }
+.obs-dests { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: clamp(8px, 2.5vw, 16px); }
+.obs-dest { display: grid; justify-items: center; gap: 8px; min-height: 120px; padding: 12px 6px; border-radius: 20px 26px 20px 26px; border: 1px solid var(--line-strong); background: color-mix(in srgb, var(--surface) 75%, transparent); color: var(--ink); transition: opacity .3s, border-color .3s; }
+.obs-dest:hover { border-color: var(--tone); }
+.obs-dest svg { width: 100%; max-width: 84px; overflow: visible; }
+.obs-dest b { font: 600 13px var(--mono); letter-spacing: .14em; }
+.obs-dest.is-tried { opacity: .45; }
+.obs-dest-orb { fill: color-mix(in srgb, var(--tone) 20%, var(--surface-2)); stroke: var(--tone); stroke-width: 1.2; }
+.obs-dest-wave { fill: none; stroke: var(--ink-2); stroke-width: 1.6; stroke-linecap: round; animation: obs-bob 2.6s ease-in-out infinite; }
+.obs-dest-ring { fill: none; stroke: var(--amber); stroke-width: 1.4; }
+.obs-dest-spin { transform-origin: 40px 40px; animation: spin 6s linear infinite; }
+.obs-dest-comet { fill: #fff; filter: drop-shadow(0 0 4px var(--tone)); }
+.obs-dest-land { fill: color-mix(in srgb, var(--good) 55%, transparent); }
+@keyframes obs-bob { 50% { transform: translateY(-2px); } }
+
+/* Solve stamp */
+.obs-unlocked { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; border-radius: 22px 30px; background: color-mix(in srgb, var(--bg-deep) 55%, transparent); }
+.obs-unlocked-seal { display: grid; justify-items: center; gap: 4px; padding: 18px 26px; border-radius: 22px; border: 2px solid var(--tone); background: var(--surface); color: var(--tone); box-shadow: 0 0 0 8px var(--tone-soft), 0 0 40px color-mix(in srgb, var(--tone) 45%, transparent); }
+.obs-unlocked-seal b { font: 500 12px var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--ink-2); }
+.obs-unlocked-seal span { font: 700 28px var(--sans); letter-spacing: -.03em; color: var(--ink); }
+
+/* Private notes as navigator logbook pages */
+.obs-note { display: grid; gap: 10px; }
+.obs-note i { color: var(--ink-2); }
+.obs-rules { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.obs-rules li { position: relative; padding-left: 18px; }
+.obs-rules li::before { content: '✦'; position: absolute; left: 0; color: var(--tone); font-size: 11px; top: 3px; }
+
+/* Finale · star map */
+.obs-map { width: min(100%, 560px); padding: 14px 10px 10px; }
+.obs-map svg { position: relative; width: 100%; height: auto; overflow: visible; }
+.obs-map-clock { position: relative; z-index: 1; display: inline-flex; gap: 2px; padding: 4px 12px; border-radius: 10px; font: 600 18px var(--mono); color: var(--amber); background: color-mix(in srgb, var(--bg-deep) 80%, transparent); text-shadow: 0 0 10px color-mix(in srgb, var(--amber) 60%, transparent); }
+.obs-map-clock i { font-style: normal; animation: obs-blink 1s steps(2) infinite; }
+@keyframes obs-blink { 50% { opacity: 0; } }
+.obs-map-line { stroke: var(--tone); stroke-width: 1.4; stroke-linecap: round; filter: drop-shadow(0 0 3px var(--tone)); }
+.obs-map-halo { fill: color-mix(in srgb, var(--tone) 18%, transparent); animation: twinkle 2.8s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+.obs-map-star { fill: #fff; filter: drop-shadow(0 0 5px var(--tone)); }
+.obs-map-label { text-anchor: middle; font: 600 11px var(--mono); letter-spacing: .1em; fill: var(--ink); }
+.obs-map-bonus { fill: var(--amber); filter: drop-shadow(0 0 6px var(--amber)); }
+.obs-map-caption { text-anchor: middle; font: italic 500 9px var(--sans); fill: var(--ink-2); }
+.obs-map-comet { fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-dasharray: 26 600; stroke-dashoffset: 626; opacity: .8; animation: obs-comet 7s 3.4s ease-in infinite; filter: drop-shadow(0 0 4px var(--tone)); }
+@keyframes obs-comet { 0% { stroke-dashoffset: 626; } 30%, 100% { stroke-dashoffset: 0; } }
+
+/* Bonus round */
+.obs-bonus { display: grid; gap: 10px; width: min(100%, 520px); text-align: left; padding: 18px; border-radius: 18px 26px 18px 26px; border: 1px dashed color-mix(in srgb, var(--amber) 60%, var(--line)); background: color-mix(in srgb, var(--surface) 80%, transparent); }
+.obs-bonus h3 { font-size: 24px; }
+.obs-bonus h3 em { color: var(--amber); }
+.obs-bonus p { font-size: 15px; }
+.obs-bonus-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.obs-bonus-form input { flex: 1 1 200px; min-height: 48px; }
+.obs-bonus-sent { color: var(--amber) !important; }
+
+@media (max-width: 420px) {
+  .obs-dest { min-height: 108px; }
+  .obs-switch { padding-inline: 2px; }
+}

@@ -1,49 +1,48 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'motion/react';
 import {
-  ArrowRight, BookOpenText, CaretDown, Check, ClipboardText, Compass, Eye, EyeSlash, Heart, Image as ImageIcon,
-  Key, Lightbulb, LockKey, MusicNotes, NotePencil, Sparkle, Shuffle, Timer, X, ArrowUpRight,
-  Armchair, Buildings, CloudRain, FilmStrip, ForkKnife, HouseSimple, Microphone, Mountains, MoonStars,
-  Radio, Seat, SunHorizon, Television, Waves, Waveform,
+  ArrowCounterClockwise, Armchair, Buildings, Cards, Check, CloudRain, Compass, Copy, FilmStrip, ForkKnife, Heart,
+  HouseSimple, Image as ImageIcon, Microphone, MoonStars, Mountains, MusicNotes, NotePencil, Pause, Play, Radio,
+  Seat, Shuffle, Sparkle, Stamp, SunHorizon, Television, Waves,
 } from '@phosphor-icons/react';
-import { Button, CheckpointFooter, Countdown, GameFrame, HintBox } from '../components.jsx';
-import RouteBriefing from '../RouteBriefing.jsx';
+import { AnswerLock, Button, Finale, GameRules, GameShell, HintLadder, HowItWorks, PrivatePanel, Round, RoundProgress, Sheet } from '../kit/Kit.jsx';
+import { useClub, usePatch } from '../kit/club.js';
+import { burstFrom } from '../kit/celebrate.js';
+import './Protocol.css';
 
 const WORDS = ['LANTERN', 'RIVER', 'CLOCK', 'ORCHARD', 'TICKET', 'WINDOW', 'COMET', 'CANDLE', 'MIRROR', 'TRAIN', 'TEA', 'PARCEL'];
 const TARGETS = { A: [1, 4, 7, 10, 11, 12], B: [2, 3, 5, 6, 8, 9] };
 const STAGES = [
-  { id: 'split', short: 'Split Key', title: 'Two partial truths.', letter: 'T', time: '12 min' },
-  { id: 'message', short: 'The Message', title: 'A sentence can keep a secret.', letter: 'O', time: '8 min' },
-  { id: 'evidence', short: 'Field Evidence', title: 'Objects are evidence.', letter: 'G', time: '12 min' },
-  { id: 'archive', short: 'The Archive', title: 'Write an ordinary Tuesday.', letter: 'E', time: '15 min' },
-  { id: 'dixit', short: 'Dixit at Distance', title: 'Same prompt. Separate worlds.', letter: 'T', time: '10 min' },
-  { id: 'samePage', short: 'Same Page', title: 'How in sync are you?', letter: 'H · E · R', time: '12 min' },
-  { id: 'vault', short: 'The Vault', title: 'One last little word.', letter: '', time: '' },
+  { id: 'split', short: 'Split Key', title: <>Two partial <em>truths.</em></>, letter: 'T' },
+  { id: 'message', short: 'The Message', title: <>A sentence can keep <em>a secret.</em></>, letter: 'O' },
+  { id: 'evidence', short: 'Field Evidence', title: <>Objects are <em>evidence.</em></>, letter: 'G' },
+  { id: 'archive', short: 'The Archive', title: <>Write an ordinary <em>Tuesday.</em></>, letter: 'E' },
+  { id: 'dixit', short: 'Dixit at Distance', title: <>Same prompt. <em>Separate worlds.</em></>, letter: 'T' },
+  { id: 'samePage', short: 'Same Page', title: <>How in sync <em>are you?</em></>, letter: 'HER' },
+  { id: 'vault', short: 'The Vault', title: <>One last little <em>word.</em></>, letter: '' },
 ];
-const BRIEFING_STOPS = [
-  { title: 'Split Key', short: 'Clue + guess', preview: 'Trade a one-word clue and find six secret words on the shared map.', icon: <Key size={18} />, position: [47, 68] },
-  { title: 'The Message', short: 'Hidden words', preview: 'A paper transmission hides two little instructions in plain sight.', icon: <NotePencil size={18} />, position: [58, 32] },
-  { title: 'Field Evidence', short: 'Object hunt', preview: 'Find nearby things and let each other invent what they mean.', icon: <ImageIcon size={18} />, position: [69, 60] },
-  { title: 'The Archive', short: 'Future Tuesday', preview: 'Write a tiny scene from an ordinary day, five years from now.', icon: <ClipboardText size={18} />, position: [78, 31] },
-  { title: 'Dixit at Distance', short: 'Picture stories', preview: 'Choose an image for one prompt, then guess the story behind it.', icon: <MusicNotes size={18} />, position: [87, 67] },
-  { title: 'Same Page', short: 'Quick choices', preview: 'Make ten tiny choices, compare your worlds, and earn the last key.', icon: <Shuffle size={18} />, position: [66, 78] },
-];
+const ROUNDS = STAGES.map(s => ({ id: s.id, label: s.short }));
+const REWARDS = { split: 'T', message: 'O', evidence: 'G', archive: 'E', dixit: 'T', samePage: 'HER', vault: '♡' };
+const KEY = [['split', 'T'], ['message', 'O'], ['evidence', 'G'], ['archive', 'E'], ['dixit', 'T'], ['samePage', 'H'], ['samePage', 'E'], ['samePage', 'R']];
+
 const INITIAL = {
-  started: false, introRole: 'A', completed: [], hints: {}, activeStage: 0, codeInput: '', vaultOpen: false,
-  split: { role: 'A', phase: 'clue', cardOpen: false, clue: '', number: 1, currentClue: '', currentNumber: 1, foundThisTurn: 0, turns: [], found: { A: 0, B: 0 }, guesses: '', misses: 0 },
-  message: { method: '', extraction: '' },
-  evidence: { role: 'A', responses: { A: ['', '', ''], B: ['', '', ''] }, bonus: { A: '', B: '' } },
-  archive: { role: 'A', texts: { A: '', B: '' }, judgeDone: false },
-  dixit: { role: 'A', interpretations: { A: '', B: '' }, revealed: false, shared: false },
-  samePage: { role: 'A', questionIndex: 0, answers: { A: Array(10).fill(''), B: Array(10).fill('') }, revealed: false, riddle: '' },
-  sidequests: [],
+  completed: [], activeStage: 0, hints: {}, vaultOpen: false, sidequests: [], closingPlan: '',
+  split: { turn: 'A', hits: { A: [], B: [] }, misses: 0 },
+  message: { marks: [] },
+  evidence: { responses: { A: ['', '', ''], B: ['', '', ''] }, stamped: { A: [], B: [] } },
+  archive: { texts: { A: '', B: '' }, ticks: [] },
+  dixit: { interpretations: { A: '', B: '' }, sealed: { A: false, B: false } },
+  samePage: { answers: { A: Array(10).fill(''), B: Array(10).fill('') }, matches: [] },
 };
+
 const SIDEQUESTS = [
-  { title: 'The 30-second museum', text: 'Grab any nearby object. Sell it as an artifact from the Museum of Us. You have 30 seconds.', icon: 'museum' },
-  { title: 'Soundtrack ghost', text: 'Pick a song. Give three non-lyric clues. Guess the song, or the feeling it carries.', icon: 'music' },
-  { title: 'Search history oracle', text: 'Choose a non-sensitive recent search that accidentally describes your week. You never have to share the screen.', icon: 'oracle' },
-  { title: 'Bad invention lab', text: 'Invent a wildly unnecessary product for two people. Give it a name, a price, and one absurd feature.', icon: 'invention' },
-  { title: 'One-photo time machine', text: 'Find an old photo from before you met. Tell the story of that exact day in 60 seconds.', icon: 'photo' },
-  { title: 'Paper prototype', text: 'Draw the same impossible object in 90 seconds: a machine that lets two people share one ordinary Tuesday.', icon: 'paper' },
+  { title: 'The 30-second museum', text: 'Grab any nearby object. Sell it as an artifact from the Museum of Us. You have 30 seconds.' },
+  { title: 'Soundtrack ghost', text: 'Pick a song. Give three non-lyric clues. Guess the song, or the feeling it carries.' },
+  { title: 'Search history oracle', text: 'Choose a non-sensitive recent search that accidentally describes your week. You never have to share the screen.' },
+  { title: 'Bad invention lab', text: 'Invent a wildly unnecessary product for two people. Give it a name, a price and one absurd feature.' },
+  { title: 'One-photo time machine', text: 'Find an old photo from before you met. Tell the story of that exact day in 60 seconds.' },
+  { title: 'Paper prototype', text: 'Both draw the same impossible object in 90 seconds: a machine that lets two people share one ordinary Tuesday.' },
+  { title: 'The fourth wall', text: 'Each of you secretly picks one object the other will completely misread. Reveal together. It counts if the guesses make you laugh.' },
 ];
 const SAME_PAGE = [
   ['Sea', 'Mountains'], ['Morning', 'Midnight'], ['City', 'Small town'], ['Plan', 'Improvisation'], ['Window seat', 'Aisle'],
@@ -56,284 +55,506 @@ const SAME_PAGE_QUESTIONS = [
   'What sounds good when the day is finally ours?',
 ];
 const SAME_PAGE_ICONS = [
-  [<Waves size={25} weight="duotone" />, <Mountains size={25} weight="duotone" />],
-  [<SunHorizon size={25} weight="duotone" />, <MoonStars size={25} weight="duotone" />],
-  [<Buildings size={25} weight="duotone" />, <HouseSimple size={25} weight="duotone" />],
-  [<NotePencil size={25} weight="duotone" />, <Shuffle size={25} weight="duotone" />],
-  [<Seat size={25} weight="duotone" />, <Armchair size={25} weight="duotone" />],
-  [<Heart size={25} weight="duotone" />, <ForkKnife size={25} weight="duotone" />],
-  [<CloudRain size={25} weight="duotone" />, <Sparkle size={25} weight="duotone" />],
-  [<FilmStrip size={25} weight="duotone" />, <Television size={25} weight="duotone" />],
-  [<ImageIcon size={25} weight="duotone" />, <Microphone size={25} weight="duotone" />],
-  [<HouseSimple size={25} weight="duotone" />, <Compass size={25} weight="duotone" />],
+  [Waves, Mountains], [SunHorizon, MoonStars], [Buildings, HouseSimple], [NotePencil, Shuffle], [Seat, Armchair],
+  [Heart, ForkKnife], [CloudRain, Sparkle], [FilmStrip, Television], [ImageIcon, Microphone], [HouseSimple, Compass],
 ];
-const METHODS = ['Think category, not literal object.', 'Your partner knows which words are safe for you, not for them.', 'A clue can bridge multiple words.'];
-const MESSAGE_HINTS = ['Look at how the sentences begin before you look at what they mean.', 'The first four sentences tell you an instruction.', 'Take the third word in each of the final five sentences. Their initials spell ORBIT.'];
+const METHODS = ['Think category, not literal object.', 'Your partner knows which words are safe for you, not for them.', 'A clue can bridge several words at once.'];
+const MESSAGE = ['Tonight, all good puzzles begin with attention.', 'Actually, the trick is simpler than it looks.', 'Keep your eyes on the margins.', 'Every word can be a clue.', 'Tonight, stars often offer direction.', 'I see rivers mirror moonlight.', 'Some clues burn bright.', 'Letters can illuminate.', 'One small thing can change everything.'];
+const EVIDENCE = [
+  { title: 'Something that makes a sound', hint: 'Show it. What memory or mood might it hold?', Icon: MusicNotes },
+  { title: 'Something older than us', hint: 'Stay quiet for 30 seconds. Let them invent its story.', Icon: NotePencil },
+  { title: 'Something absurdly ordinary', hint: 'Why is this boring object secretly a symbol for you two?', Icon: Sparkle },
+];
+const CONSTRAINTS = ['one smell', 'one boring object', 'one tiny disagreement', 'one line of dialogue'];
+const BANNED = ['love', 'happy', 'future', 'forever', 'soulmate'];
 const PROMPT = 'Act as a neutral game referee for a two-person creative challenge. We each wrote a 130–180 word scene answering the same prompt. Your job is NOT to judge who loves more, who is the better writer, or whose relationship is healthier. Give us: 1. A score out of 10 for each piece on sensory specificity. 2. A score out of 10 for each on believable everyday detail. 3. A score out of 10 for how strongly each scene implies a shared world. 4. Three concrete details that overlap in spirit across the two pieces. 5. One surprising difference that is interesting rather than bad. 6. A one-sentence verdict: what do these two scenes accidentally reveal about how we imagine ordinary life together? Do not rewrite our work. Keep the tone warm, sharp, and slightly playful.';
+const TILT = [-1.6, 1.2, -.6, 1.8, -1.1, .7];
 
-function PlayerLinks({ onPlayerRoute }) {
-  return <div className="route-shortcuts"><button onClick={() => onPlayerRoute('/his')}>His clues · A</button><button onClick={() => onPlayerRoute('/hers')}>Her clues · B</button></div>;
+const countWords = value => value.trim() ? value.trim().split(/\s+/).length : 0;
+const pad = n => String(n).padStart(2, '0');
+
+export function progress(data = {}) {
+  const completed = data.completed || [];
+  return { done: completed.filter(id => id !== 'vault').length, total: 6, finished: Boolean(data.vaultOpen) || completed.includes('vault') };
 }
 
-function ChapterMenu({ items, active, completed, onSelect }) {
-  const activeItem = items[active];
-  return <details className="chapter-menu"><summary><span className="chapter-menu-number">{String(active + 1).padStart(2, '0')}</span><span className="chapter-menu-copy"><b>{activeItem.short}</b></span><span className="chapter-menu-progress">{completed.filter(id => id !== 'vault').length}/6</span><CaretDown size={17} /></summary><div className="chapter-menu-list">{items.map((item, index) => { const allowed = index === 0 || completed.includes(items[index - 1].id); return <button type="button" key={item.id} disabled={!allowed} className={`${active === index ? 'is-active' : ''} ${completed.includes(item.id) ? 'is-done' : ''}`} onClick={event => { onSelect(index); event.currentTarget.closest('details').open = false; }}><span>{completed.includes(item.id) ? <Check size={14}/> : String(index + 1).padStart(2, '0')}</span><b>{item.short}</b>{active === index && <i>YOU ARE HERE</i>}{!allowed && <LockKey size={14}/>}</button>; })}</div></details>;
-}
-
-function countWords(value) { return value.trim() ? value.trim().split(/\s+/).length : 0; }
-function SelectPlayer({ value, onChange, label = 'Hand the screen to' }) {
-  return <div className="role-switch"><span>{label}</span>{['A', 'B'].map(role => <button key={role} className={value === role ? 'selected' : ''} onClick={() => onChange(role)}>Player {role}</button>)}</div>;
-}
-function completeFlags(state, id) { return (state.completed || []).includes(id); }
-
-export default function Protocol({ data, update, onBack, onLibrary, onPlayerRoute, theme, onToggleTheme }) {
-  const [photoUrls, setPhotoUrls] = useState({});
-  const state = { ...INITIAL, ...data };
+export default function Protocol({ data, update }) {
+  const { me, nameOf } = useClub();
+  const [state, patch] = usePatch(data, update, INITIAL);
+  const [stamp, setStamp] = useState(null);
+  const [chaosOpen, setChaosOpen] = useState(false);
+  const mine = me === 'B' ? 'B' : 'A';
+  const theirs = mine === 'A' ? 'B' : 'A';
   const completed = state.completed || [];
-  const stageIndex = Math.min(state.activeStage || 0, STAGES.length - 1);
-  const stage = STAGES[stageIndex];
-  const patch = patcher => update(previous => {
-    const base = { ...INITIAL, ...(previous || {}) };
-    return typeof patcher === 'function' ? patcher(base) : { ...base, ...patcher };
+  const finished = Boolean(state.vaultOpen) || completed.includes('vault');
+  const index = Math.min(Math.max(0, state.activeStage || 0), STAGES.length - 1);
+  const stage = STAGES[index];
+  const done = completed.includes(stage.id);
+
+  const section = key => ({ ...INITIAL[key], ...(state[key] || {}) });
+  const patchIn = key => fn => patch(old => {
+    const cur = { ...INITIAL[key], ...(old[key] || {}) };
+    return { [key]: { ...cur, ...(typeof fn === 'function' ? fn(cur) : fn) } };
   });
-  const patchSection = (key, modify) => patch(old => ({ ...old, [key]: { ...old[key], ...(typeof modify === 'function' ? modify(old[key]) : modify) } }));
-  const markComplete = id => {
-    patch(old => ({ ...old, completed: [...new Set([...(old.completed || []), id])], activeStage: Math.min(STAGES.findIndex(item => item.id === id) + 1, STAGES.length - 1) }));
+  const complete = id => {
+    const at = STAGES.findIndex(s => s.id === id);
+    if (STAGES[at].letter) setStamp({ letter: STAGES[at].letter, key: Date.now() });
+    patch(old => ({
+      completed: [...new Set([...(old.completed || []), id])],
+      activeStage: Math.min(at + 1, STAGES.length - 1),
+      ...(id === 'vault' ? { vaultOpen: true } : {}),
+    }));
   };
-  const hintIndex = state.hints?.[stage.id] || 0;
-  const revealHint = () => patch(old => ({ ...old, hints: { ...(old.hints || {}), [stage.id]: Math.min((old.hints?.[stage.id] || 0) + 1, stage.id === 'message' ? 3 : 3) } }));
-  const goStage = index => patch({ activeStage: index });
-  const stageDone = completeFlags(state, stage.id);
-  const keys = useMemo(() => STAGES.slice(0, 6).flatMap(item => completed.includes(item.id) ? item.letter.split(' · ') : []), [completed]);
-  const hintBox = (hints, recoveryLabel = 'Give us the key and keep going') => <HintBox hints={hints} index={hintIndex} onReveal={revealHint} recovery onRecovery={() => markComplete(stage.id)} recoveryLabel={recoveryLabel} />;
-  const footer = (label = 'Take the key') => <CheckpointFooter completed={stageDone} letter={stage.letter} onComplete={() => markComplete(stage.id)} label={label} />;
+  const hint = id => ({ level: state.hints?.[id] || 0, onLevel: n => patch(old => ({ hints: { ...(old.hints || {}), [id]: n } })) });
+  const replay = () => update(() => JSON.parse(JSON.stringify(INITIAL)));
+  const props = { mine, theirs, done, nameOf, complete: () => complete(stage.id), hint: hint(stage.id) };
 
-  const renderSplit = () => {
-    const split = { ...INITIAL.split, ...(state.split || {}) };
-    const role = split.role || 'A';
-    const solved = split.found?.[role] || 0;
-    const phase = split.phase || 'clue';
-    const currentNumber = Number(split.currentNumber) || 1;
-    const submitClue = () => {
-      if (!split.clue.trim()) return;
-      patchSection('split', old => ({
-        turns: [...(old.turns || []), { role: old.role, clue: old.clue.trim(), number: Number(old.number) || 1, guesses: (old.guesses || '').trim() }],
-        clue: '', guesses: '', cardOpen: false, phase: 'map', currentClue: old.clue.trim(), currentNumber: Number(old.number) || 1, foundThisTurn: 0,
-      }));
-    };
-    const confirmTarget = () => patchSection('split', old => {
-      const foundThisTurn = (old.foundThisTurn || 0) + 1;
-      const turnFinished = foundThisTurn >= (Number(old.currentNumber) || 1);
-      return {
-        found: { ...old.found, [role]: Math.min(6, (old.found?.[role] || 0) + 1) },
-        foundThisTurn: turnFinished ? 0 : foundThisTurn,
-        phase: turnFinished ? 'clue' : 'map',
-        role: turnFinished ? (role === 'A' ? 'B' : 'A') : role,
-        currentClue: turnFinished ? '' : old.currentClue,
-        currentNumber: turnFinished ? 1 : old.currentNumber,
-        guesses: '', cardOpen: false, clue: '',
-      };
-    });
-    const missTarget = () => patchSection('split', old => ({ misses: (old.misses || 0) + 1, guesses: '' }));
-    const passClue = () => patchSection('split', old => ({ role: role === 'A' ? 'B' : 'A', phase: 'clue', currentClue: '', currentNumber: 1, foundThisTurn: 0, guesses: '', cardOpen: false, clue: '' }));
-    const hints = [METHODS[0], METHODS[1], METHODS[2]];
-    return <>
-      <div className="stage-intro"><p>One player gives a clue. The other taps the map.</p><div className="stage-meta"><span><Timer size={15} /> 12 minutes</span><span><Heart size={15} /> One team</span></div></div>
-      <div className={`split-layout ${phase === 'map' ? 'map-phase' : ''}`}>
-        <section className={`play-panel split-secret ${phase === 'map' ? 'guessing-phase' : 'clue-phase'}`}>
-          {phase === 'clue' ? <>
-            <div className="panel-heading"><span className="mini-icon rose-icon"><LockKey size={17} /></span><div><h3>Clue-giver · Player {role}</h3><p>Keep your six marked places private.</p></div></div>
-            <SelectPlayer value={role} onChange={next => patchSection('split', { role: next, cardOpen: false, clue: '', guesses: '' })} label="Who gives this clue?" />
-            {!split.cardOpen ? <button className="privacy-card" onClick={() => patchSection('split', { cardOpen: true })}><Eye size={22} /><strong>Open your private map</strong><span>Hand over the screen first.</span></button> : <div className="target-reveal"><div className="target-reveal-head"><span>ONLY PLAYER {role} READS THIS</span><button onClick={() => patchSection('split', { cardOpen: false })} aria-label="Hide private key card"><EyeSlash size={18} /></button></div><div className="target-word-list">{TARGETS[role].map(n => <span key={n}>{String(n).padStart(2, '0')} <b>{WORDS[n - 1]}</b></span>)}</div></div>}
-            <div className="target-meter"><div><span>Targets found</span><strong>{solved}/6</strong></div><div className="meter-track"><i style={{ width: `${Math.min(100, solved / 6 * 100)}%` }} /></div></div>
-            {split.cardOpen && <div className="clue-entry"><span className="input-caption">Give one word + a number</span><div className="clue-fields"><input value={split.clue || ''} onChange={e => patchSection('split', { clue: e.target.value })} placeholder="e.g. sky" aria-label="One-word clue" /><fieldset className="count-field"><legend>Places it links</legend><div className="count-picker" role="group" aria-label="Number of words in clue">{[1, 2, 3, 4, 5, 6].map(n => <button type="button" key={n} className={Number(split.number || 1) === n ? 'selected' : ''} aria-pressed={Number(split.number || 1) === n} onClick={() => patchSection('split', { number: n })}>{n}</button>)}</div></fieldset></div><Button kind="berry" disabled={!split.clue.trim()} onClick={submitClue}><Sparkle size={16} /> Send clue to partner</Button></div>}
-          </> : <>
-            <div className="partner-clue-banner"><span className="partner-avatar">{role === 'A' ? 'B' : 'A'}</span><div><small>PLAYER {role === 'A' ? 'B' : 'A'} · GUESSER</small><b>{split.currentClue}</b></div><span className="clue-target-count">{split.foundThisTurn || 0}<i> / </i>{currentNumber}</span></div>
-            <div className="guess-pad"><div className="map-heading"><span className="input-caption">Shared map</span><span className="map-stamp"><Compass size={14}/> 12 places</span></div><p>Tap the place your partner picked.</p><div className="word-grid"><svg className="map-thread" viewBox="0 0 1000 380" preserveAspectRatio="none" aria-hidden="true"><path d="M165 45 H500 H835 Q875 45 875 82 V105 Q875 125 835 125 H165 Q125 125 125 165 V196 Q125 216 165 216 H835 Q875 216 875 256 V287 Q875 307 835 307 H165"/></svg>{WORDS.map((word, index) => <button type="button" key={word} className={`word-tile ${split.guesses === word ? 'is-selected' : ''}`} onClick={() => patchSection('split', { guesses: word })} aria-pressed={split.guesses === word}><span className="word-tile-number">{String(index + 1).padStart(2, '0')}</span><b>{word}</b><Compass size={14} className="word-tile-marker"/></button>)}</div>{split.guesses && <div className="guess-confirm"><span>You picked <b>{split.guesses}</b></span><div><button type="button" className="tiny-accept" onClick={confirmTarget}>{(split.foundThisTurn || 0) + 1 >= currentNumber ? 'Found it · swap players' : 'Found it · one more'}</button><button type="button" className="tiny-decline" onClick={missTarget}>Try another place</button></div></div>}<button type="button" className="pass-clue" onClick={passClue}><ArrowRight size={14}/> Pass and switch clue-giver</button></div>
-          </>}
-          {split.turns?.length > 0 && <details className="mini-turn-log"><summary><span>Clue trail</span><i>{split.turns.length} turns</i><CaretDown size={14}/></summary><div>{split.turns.map((turn, i) => <p key={`${turn.clue}-${i}`}><b>{turn.role}</b><span>{turn.clue} · {turn.number}</span></p>)}</div></details>}
-        </section>
-        <aside className="side-note rose-side"><span className="micro-label">IF YOU GET STUCK</span>{hintBox(hints, 'Skip this puzzle')}<div className="side-petal" aria-hidden="true">T</div></aside>
+  const INTROS = {
+    split: `Six of these places are yours and six are ${nameOf(theirs)}'s. Lead each other to them, one word at a time.`,
+    message: `${nameOf('A')} holds the opening of the transmission, ${nameOf('B')} the ending. The opening's first letters say what to do with the third word of each line in the ending.`,
+    evidence: `Find three things near you. Show each one on camera and let ${nameOf(theirs)} invent its story.`,
+    archive: 'Write the scene on your own. Then let a friendly AI referee look for the details that rhyme.',
+    dixit: 'Each of you picks one image for the same prompt, not a photo of either of you, and sends it at the same moment.',
+    samePage: 'Ten quick picks, made privately. Go with your first instinct.',
+    vault: `Everything you earned tonight is sitting in the lock, ${nameOf('A')} and ${nameOf('B')}.`,
+  };
+
+  const body = {
+    split: <SplitKey {...props} split={section('split')} set={patchIn('split')} />,
+    message: <Message {...props} msg={section('message')} set={patchIn('message')} />,
+    evidence: <Evidence {...props} ev={section('evidence')} set={patchIn('evidence')} />,
+    archive: <Archive {...props} archive={section('archive')} set={patchIn('archive')} />,
+    dixit: <Dixit {...props} dixit={section('dixit')} set={patchIn('dixit')} />,
+    samePage: <SamePage {...props} sync={section('samePage')} set={patchIn('samePage')} />,
+    vault: <Vault {...props} completed={completed} />,
+  }[stage.id];
+
+  return <GameShell title="The Distance Protocol" number="Game 01" tone="rose" backdrop="paper" rules={<GameRules steps={RULES(nameOf)} audioSrc="/audio/rules/protocol.mp3" />}>
+    <RoundProgress rounds={ROUNDS} current={finished ? -1 : index} done={completed} onSelect={i => !finished && patch({ activeStage: i })} rewards={REWARDS} />
+    {finished
+      ? <Finale eyebrow="The vault is open" title={<>{nameOf('A')} & {nameOf('B')}, <em>together.</em></>} onReplay={replay} replayLabel="Play again from the start (clears tonight)">
+        <p>Six locks and one word, opened from two different places. Before you hang up, each of you says one sentence: the part of tonight you would keep if you could never replay it.</p>
+        <ClosingPlan value={state.closingPlan || ''} onChange={v => patch({ closingPlan: v })} />
+      </Finale>
+      : <Round id={stage.id} className="pr-round" eyebrow={stage.letter ? `Earns ${stage.letter.split('').join(' · ')}` : 'Final unlock'} title={stage.title} intro={INTROS[stage.id]}>
+        {stage.id !== 'vault' && <motion.button type="button" className="pr-chaos-tab" onClick={() => setChaosOpen(true)} whileTap={{ scale: .9, rotate: -4 }}>
+          <Cards size={17} weight="duotone" /><span>Tiny chaos</span>
+        </motion.button>}
+        {body}
+      </Round>}
+    <ChaosSheet open={chaosOpen} onClose={() => setChaosOpen(false)} drawn={state.sidequests || []} onDraw={i => patch(old => ({ sidequests: [...(old.sidequests || []), i] }))} />
+    <StampOverlay stamp={stamp} onDone={() => setStamp(null)} />
+  </GameShell>;
+}
+
+const RULES = nameOf => [
+  { title: 'Two phones, one map', text: `${nameOf('A')} and ${nameOf('B')} each play on their own phone over a call. Some pages only show your half. Read it out loud in your own words.` },
+  { title: 'Six stops, eight letters', text: 'Split Key, The Message, Field Evidence, The Archive, Dixit at Distance and Same Page. Each stop earns letters for the vault.' },
+  { title: 'Hints when you want them', text: 'Puzzles have a hint ladder. After the last hint you can take the answer and keep moving.' },
+  { title: 'The vault', text: 'Your letters spell the passcode for the last lock. Open it together.' },
+];
+
+// 01 Split Key
+
+function SplitKey({ split, set, mine, theirs, done, nameOf, complete, hint }) {
+  const [miss, setMiss] = useState(null);
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const hits = split.hits?.[mine] || [];
+  const guessing = split.turn === mine && !done;
+  const found = done ? TARGETS[theirs] : hits;
+
+  const tap = (n, el) => {
+    if (!guessing || found.includes(n)) return;
+    if (TARGETS[theirs].includes(n)) {
+      const next = [...hits, n];
+      burstFrom(el, { shape: 'heart', count: 22 });
+      set(old => ({ hits: { ...old.hits, [mine]: next } }));
+      if (next.length >= 6) complete();
+    } else {
+      setMiss(n); clearTimeout(timer.current);
+      timer.current = setTimeout(() => setMiss(null), 1100);
+      set(old => ({ turn: theirs, misses: (old.misses || 0) + 1 }));
+    }
+  };
+  const reveal = () => { set(old => ({ hits: { ...old.hits, [mine]: TARGETS[theirs] } })); complete(); };
+
+  return <>
+    <div className="pr-map">
+      <svg className="pr-map-route" viewBox="0 0 300 400" preserveAspectRatio="none" aria-hidden="true">
+        <path d="M30 40 C 120 10, 200 70, 270 40 S 250 140, 150 130 S 20 160, 40 220 S 200 250, 260 230 S 270 330, 170 340 S 40 330, 30 380" />
+      </svg>
+      <span className="pr-compass" aria-hidden="true"><Compass size={26} weight="light" /></span>
+      <TurnBaton guessing={guessing} done={done} mine={mine} theirs={theirs} nameOf={nameOf} onPass={() => set({ turn: guessing ? theirs : mine })} />
+      <div className="pr-tiles">
+        {WORDS.map((word, i) => {
+          const n = i + 1;
+          const isFound = found.includes(n);
+          return <motion.button type="button" key={word} className={`pr-tile ${isFound ? 'is-found' : ''} ${miss === n ? 'is-miss' : ''} ${guessing ? 'is-live' : ''}`}
+            disabled={!guessing || isFound} onClick={e => tap(n, e.currentTarget)} aria-pressed={isFound}
+            aria-label={`${word}${isFound ? `, one of ${nameOf(theirs)}'s places` : ''}`}
+            initial={{ opacity: 0, y: 18, rotate: 0 }} animate={{ opacity: 1, y: 0, rotate: TILT[i % 6], rotateY: isFound ? 180 : 0 }}
+            transition={{ default: { type: 'spring', stiffness: 260, damping: 18, delay: i * .035 }, rotateY: { type: 'spring', stiffness: 170, damping: 15 } }}
+            whileTap={guessing && !isFound ? { scale: .9 } : undefined}>
+            <span className="pr-face pr-front"><i>{pad(n)}</i><b>{word}</b></span>
+            <span className="pr-face pr-back"><Postmark letter={theirs} /><b>{word}</b></span>
+          </motion.button>;
+        })}
       </div>
-      {footer('We found the targets')}
-    </>;
-  };
+      <AnimatePresence>{miss && <motion.p className="pr-miss-note" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+        Not one of {nameOf(theirs)}'s. Your turn to give the clue.
+      </motion.p>}</AnimatePresence>
+    </div>
+    <PrivatePanel title="Your six places" a={<TargetList role="A" />} b={<TargetList role="B" />} />
+    {!done && <HintLadder hints={METHODS} {...hint} onReveal={reveal} revealLabel={`Show me ${nameOf(theirs)}'s six`} />}
+    <HowItWorks>{`Take turns. The giver says one word and a number that links some of their six places. The guesser taps places on their own phone; a wrong tap passes the turn. Find all six of ${nameOf(theirs)}'s places to earn T.`}</HowItWorks>
+  </>;
+}
 
-  const renderMessage = () => {
-    const msg = { ...INITIAL.message, ...(state.message || {}) };
-    const text = ['Tonight, all good puzzles begin with attention.', 'Actually, the trick is simpler than it looks.', 'Keep your eyes on the margins.', 'Every word can be a clue.', 'Tonight, stars often offer direction.', 'I see rivers mirror moonlight.', 'Some clues burn bright.', 'Letters can illuminate.', 'One small thing can change everything.'];
-    const correct = msg.method.trim().toUpperCase() === 'TAKE' && msg.extraction.trim().toUpperCase() === 'ORBIT';
-    return <>
-      <div className="stage-intro"><p>Two layers hide in plain sight. First read the first four sentences from a certain angle. Then use what they tell you on the last five.</p><div className="stage-meta"><span><Timer size={15} /> 8 minutes</span><span><Sparkle size={15} /> Nothing is case-sensitive</span></div></div>
-      <section className="message-note"><div className="transmission-heading"><span className="transmission-art"><Radio size={26} weight="duotone" /></span><span><span className="micro-label">Recovered transmission</span><small>INBOUND · 98.4 MHZ</small></span><Waveform size={66} weight="thin" className="transmission-wave" /></div><div className="message-text">{text.map((line, i) => <p key={i} className={i === 4 ? 'message-break' : ''}><span>{String(i + 1).padStart(2, '0')}</span>{line}</p>)}</div><small>Read the opening initials, then follow the instruction in the final five lines.</small></section>
-      <section className="play-panel message-entry"><div className="panel-heading"><span className="mini-icon peach-icon"><NotePencil size={17} /></span><div><h3>Enter the two layers</h3><p>The extraction chain should make a five-letter word.</p></div></div><div className="two-answer-fields"><label><span>First four initials → method</span><input value={msg.method} onChange={e => patchSection('message', { method: e.target.value })} placeholder="four letters" maxLength={8} /></label><label><span>Take the method across the final five → word</span><input value={msg.extraction} onChange={e => patchSection('message', { extraction: e.target.value })} placeholder="five letters" maxLength={10} /></label></div>{msg.method && msg.extraction && <p className={`answer-feedback ${correct ? 'answer-correct' : ''}`}>{correct ? 'That fits the transmission. The key is its first letter.' : 'Close the page for a second and look at the sentence starts.'}</p>}</section>
-      <div className="clarification-note"><Lightbulb size={18} /><p><b>A clearer version for this site:</b> the source PDF’s last-five-sentence extraction has a small typo. This version makes the intended third-word initials spell ORBIT, just as the host guide says.</p></div>
-      {hintBox(MESSAGE_HINTS, 'Reveal the key and move on')}
-      {correct && !stageDone ? footer('Take O and continue') : footer('We cracked it')}
-    </>;
-  };
+function TurnBaton({ guessing, done, mine, theirs, nameOf, onPass }) {
+  const giver = guessing ? theirs : mine;
+  const guesser = guessing ? mine : theirs;
+  return <motion.div className="pr-baton" layout transition={{ type: 'spring', stiffness: 300, damping: 26 }}>
+    <div className="pr-baton-pair" aria-hidden="true">
+      <span className={`role-dot role-dot-${giver}`}>{giver}</span>
+      <svg viewBox="0 0 60 16"><path d="M2 8 H52" /><path d="M46 3 L54 8 L46 13" /></svg>
+      <span className={`role-dot role-dot-${guesser}`}>{guesser}</span>
+    </div>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.p key={done ? 'done' : guessing ? 'g' : 'c'} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }}>
+        {done ? <>You found all six. Keep giving {nameOf(theirs)} clues until yours are found too.</>
+          : guessing ? <><b>Your turn to guess.</b> {nameOf(theirs)} gives one word and a number.</>
+          : <><b>Your turn to give.</b> One word and a number for {nameOf(theirs)}.</>}
+      </motion.p>
+    </AnimatePresence>
+    {!done && <Button kind="soft" onClick={onPass}>{guessing ? 'I’ll stop here' : `${nameOf(theirs)} is done guessing`}</Button>}
+  </motion.div>;
+}
 
-  const renderEvidence = () => {
-    const ev = { ...INITIAL.evidence, ...(state.evidence || {}) };
-    const prompts = [
-      ['Something that makes a sound', 'Show it. What memory or mood might it represent?', <MusicNotes size={25} weight="duotone" />],
-      ['Something older than your relationship', 'Stay quiet for 30 seconds. Let them invent its story.', <NotePencil size={25} weight="duotone" />],
-      ['Something absurdly ordinary', 'Why is this boring object secretly a good symbol for you two?', <Sparkle size={25} weight="duotone" />],
-    ];
-    const responseCount = [...(ev.responses?.A || []), ...(ev.responses?.B || [])].filter(v => v.trim()).length;
-    const capture = (role, index, value) => patchSection('evidence', old => { const rows = [...(old.responses?.[role] || ['', '', ''])]; rows[index] = value; return { responses: { ...old.responses, [role]: rows } }; });
-    return <>
-      <div className="stage-intro"><p>Find three everyday objects in four minutes. Give each one a little story; the other person gets to interpret it. No one needs a perfect guess.</p><div className="stage-meta"><span><Timer size={15} /> Four-minute search each</span><span><Heart size={15} /> Objects can be tiny or silly</span></div></div>
-      <Countdown seconds={240} label="Your scavenger sprint" />
-      <section className="evidence-sheet"><div className="sheet-top"><div><span className="micro-label">The evidence board</span><h3>Three objects, two points of view.</h3></div><SelectPlayer value={ev.role} onChange={role => patchSection('evidence', { role })} label="Writing for" /></div><div className="evidence-prompts">{prompts.map(([title, hint, icon], i) => <label className={`evidence-prompt evidence-prompt-${i + 1}`} key={title}><span className="prompt-art"><span>{icon}</span><i>0{i + 1}</i></span><span className="prompt-title"><b>{title}</b><small>{hint}</small></span><input value={ev.responses?.[ev.role]?.[i] || ''} onChange={e => capture(ev.role, i, e.target.value)} placeholder="Add a tiny story…" /></label>)}</div><div className="evidence-summary"><span>{responseCount}/6 stories added</span><div className="meter-track"><i style={{ width: `${responseCount / 6 * 100}%` }} /></div></div></section>
-      <details className="bonus-card"><summary><Sparkle size={17} /> Bonus round · The fourth wall</summary><p>Each person secretly picks one extra object the other will completely misread. Reveal together. It is a win if the guesses make you laugh.</p><SelectPlayer value={ev.role} onChange={role => patchSection('evidence', { role })} label="Bonus note for" /><input value={ev.bonus?.[ev.role] || ''} onChange={e => patchSection('evidence', old => ({ bonus: { ...old.bonus, [old.role]: e.target.value } }))} placeholder="Optional: what did they think it was?" /></details>
-      {footer('We told the stories')}
-    </>;
-  };
+function TargetList({ role }) {
+  return <div className="pr-targets">{TARGETS[role].map((n, i) => <span key={n} style={{ '--i': i }}><i>{pad(n)}</i>{WORDS[n - 1]}</span>)}</div>;
+}
 
-  const renderArchive = () => {
-    const archive = { ...INITIAL.archive, ...(state.archive || {}) };
-    const role = archive.role || 'A';
-    const words = countWords(archive.texts?.[role] || '');
-    const write = value => patchSection('archive', old => ({ texts: { ...old.texts, [old.role]: value } }));
-    const copyPrompt = async () => { try { await navigator.clipboard.writeText(PROMPT); patchSection('archive', { copied: true }); window.setTimeout(() => patchSection('archive', { copied: false }), 2200); } catch { patchSection('archive', { copied: false }); } };
-    return <>
-      <div className="stage-intro"><p>Write a little slice of daily life, five years from now. It is not a love letter, a prediction, or a test. Tiny real details do all the work.</p><div className="stage-meta"><span><Timer size={15} /> 15 minutes</span><span><NotePencil size={15} /> One ordinary Tuesday</span></div></div>
-      <section className="archive-prompt"><span className="micro-label">The only prompt</span><h3>“It is an entirely normal Tuesday, five years from now. Nothing dramatic happens. Somehow, this is the scene you remember.”</h3><div className="constraint-list"><span>one smell</span><span>one boring object</span><span>one tiny disagreement</span><span>one line of dialogue</span><span>skip: love · happy · future · forever · soulmate</span></div></section>
-      <section className="play-panel writing-panel"><div className="panel-heading"><span className="mini-icon peach-icon"><NotePencil size={17} /></span><div><h3>Write privately, then swap</h3><p>Tap a player tab to hand over the screen. Their draft stays hidden until they choose to share it.</p></div></div><SelectPlayer value={role} onChange={next => patchSection('archive', { role: next })} label="Writer" /><textarea className="scene-editor" value={archive.texts?.[role] || ''} onChange={e => write(e.target.value)} placeholder="The kettle makes its small angry noise. Someone has left a…" maxLength={2400} /><div className="word-counter"><span>{words} words</span><span>{words >= 130 && words <= 180 ? 'Perfect little scene' : words < 130 ? `${130 - words} to reach the suggested length · shorter is fine` : 'Longer is fine too · trim only if it feels good'}</span></div><details className="private-draft"><summary><Eye size={15} /> Preview your partner’s scene after they say “ready”</summary><SelectPlayer value={role === 'A' ? 'B' : 'A'} onChange={() => patchSection('archive', { role: role === 'A' ? 'B' : 'A' })} label="Other writer" /><blockquote>{archive.texts?.[role === 'A' ? 'B' : 'A'] || 'Their draft is still empty.'}</blockquote></details></section>
-      <section className="judge-card"><div><span className="micro-label">Your friendly AI referee</span><h3>No rankings. Just good noticing.</h3><p>Paste both scenes in one Claude or GPT conversation, then ask it to spot the ordinary details that rhyme.</p></div><button className="copy-prompt" onClick={copyPrompt}><ClipboardText size={17} />{archive.copied ? 'Copied' : 'Copy the full judge prompt'}</button><details><summary>Read the full judge prompt</summary><p>{PROMPT}</p></details></section>
-      <label className="checkbox-line"><input type="checkbox" checked={archive.judgeDone || false} onChange={e => patchSection('archive', { judgeDone: e.target.checked })} /><span>We both talked about one surprising detail.</span></label>
-      {footer('We shared the scenes')}
-    </>;
-  };
+function Postmark({ letter }) {
+  return <svg className="pr-postmark" viewBox="0 0 60 60" aria-hidden="true">
+    <circle cx="30" cy="30" r="25" /><circle cx="30" cy="30" r="19" />
+    <path d="M4 22 Q 30 14 56 22 M4 30 Q 30 22 56 30 M4 38 Q 30 30 56 38" />
+    <text x="30" y="35" textAnchor="middle">{letter}</text>
+  </svg>;
+}
 
-  const renderDixit = () => {
-    const dixit = { ...INITIAL.dixit, ...(state.dixit || {}) };
-    const role = dixit.role || 'A';
-    const onPhoto = e => { const file = e.target.files?.[0]; if (file) { const url = URL.createObjectURL(file); setPhotoUrls(old => ({ ...old, [role]: url })); } };
-    const threeWords = value => countWords(value) === 3;
-    const bothReady = ['A', 'B'].every(p => threeWords(dixit.interpretations?.[p] || ''));
-    return <>
-      <div className="stage-intro"><p>Pick one image that is not a photo of either of you. Send it at the same time, then guess the feeling behind each other’s choice in exactly three words.</p><div className="stage-meta"><span><Timer size={15} /> 10 minutes</span><span><ImageIcon size={15} /> Any image, screenshot, or drawing</span></div></div>
-      <section className="dixit-board"><div className="dixit-prompt"><span className="micro-label">Your shared prompt</span><h3>“This is what being understood feels like.”</h3><span className="prompt-orbit">✳</span></div><div className="dixit-step"><SelectPlayer value={role} onChange={next => patchSection('dixit', { role: next, revealed: false })} label="Writing for"/><label className="upload-tile"><input type="file" accept="image/*" onChange={onPhoto} /><span className="upload-icon"><ImageIcon size={23} /></span><b>{photoUrls[role] ? 'Change the image' : 'Optional: pick your image'}</b><small>Your photo stays in this browser tab. A text-only reveal is lovely too.</small></label>{photoUrls[role] && <img className="dixit-preview" src={photoUrls[role]} alt={`Private image for player ${role}`} />}<label className="three-words"><span>Three words for why your partner chose theirs</span><input value={dixit.interpretations?.[role] || ''} onChange={e => patchSection('dixit', old => ({ interpretations: { ...old.interpretations, [old.role]: e.target.value } }))} placeholder="quiet, brave, home" /><small>{dixit.interpretations?.[role] ? `${countWords(dixit.interpretations[role])} words` : 'Write exactly three. Keep your image and explanation secret.'}</small></label></div><div className="simultaneous-bar"><span>{bothReady ? 'Both interpretations are ready.' : 'Wait until both players have written three words.'}</span><Button kind={dixit.revealed ? 'soft' : 'dark'} disabled={!bothReady && !dixit.revealed} onClick={() => patchSection('dixit', { revealed: !dixit.revealed })}>{dixit.revealed ? 'Hide reveal' : 'Reveal together'}<ArrowRight size={16} /></Button></div>{dixit.revealed && <div className="interpretation-reveal">{['A', 'B'].map(person => <article key={person}><span>PLAYER {person}</span>{photoUrls[person] && <img src={photoUrls[person]} alt={`Player ${person}'s selected image`} />}<strong>{dixit.interpretations[person]}</strong></article>)}</div>}</section>
-      <p className="gentle-note"><Heart size={16} /> Matching images is not the goal. The interesting part is what the other person noticed.</p>
-      <label className="checkbox-line"><input type="checkbox" checked={dixit.shared || false} onChange={e => patchSection('dixit', { shared: e.target.checked })} /><span>We each explained what our image meant, without rushing the guess.</span></label>
-      {footer('We understood the images')}
-    </>;
-  };
+// 02 The Message
 
-  const renderSamePage = () => {
-    const sync = { ...INITIAL.samePage, ...(state.samePage || {}) };
-    const role = sync.role || 'A';
-    const answerRows = sync.answers?.[role] || Array(10).fill('');
-    const ready = ['A', 'B'].every(person => (sync.answers?.[person] || []).length === 10 && sync.answers[person].every(Boolean));
-    const sameCount = ready ? SAME_PAGE.reduce((acc, _, i) => acc + (sync.answers.A[i] === sync.answers.B[i] ? 1 : 0), 0) : 0;
-    const unanswered = answerRows.findIndex(value => !value);
-    const questionIndex = Math.min(9, Math.max(0, Number.isInteger(sync.questionIndex) ? sync.questionIndex : unanswered < 0 ? 9 : unanswered));
-    const questionAnswers = SAME_PAGE[questionIndex];
-    const answerCount = answerRows.filter(Boolean).length;
-    const select = (index, choice) => patchSection('samePage', old => {
-      const rows = [...(old.answers?.[old.role] || Array(10).fill(''))];
-      rows[index] = choice;
-      const nextQuestion = rows.findIndex(value => !value);
-      return { answers: { ...old.answers, [old.role]: rows }, questionIndex: nextQuestion < 0 ? index : nextQuestion, revealed: false };
-    });
-    const handTo = next => {
-      const nextRows = sync.answers?.[next] || Array(10).fill('');
-      const nextQuestion = nextRows.findIndex(value => !value);
-      patchSection('samePage', { role: next, questionIndex: nextQuestion < 0 ? 9 : nextQuestion, revealed: false });
-    };
-    const riddleReady = ['promise', 'trust', 'silence'].includes((sync.riddle || '').trim().toLowerCase());
-    const recoverRiddle = () => patchSection('samePage', { riddle: 'promise' });
-    return <>
-      <div className="stage-intro"><p>Each person picks privately. Finish all ten, then reveal at once. No talking your way into a match.</p><div className="stage-meta"><span><Timer size={15} /> 12 minutes</span><span><Heart size={15} /> Odd answers are part of the fun</span></div></div>
-      <section className="same-page-board">
-        <div className="sync-board-heading"><div><span className="micro-label">A little compatibility experiment</span><h3>Follow your first thought.</h3></div><SelectPlayer value={role} onChange={handTo} label="Picking for" /></div>
-        <div className="sync-question-top"><span>QUESTION <b>{String(questionIndex + 1).padStart(2, '0')}</b> / 10</span><span>PLAYER {role} · PRIVATE PICKS</span></div>
-        <div className="sync-question-scene" key={questionIndex}>
-          <div className="sync-question-art" aria-hidden="true"><span>{SAME_PAGE_ICONS[questionIndex][0]}</span><i /><span>{SAME_PAGE_ICONS[questionIndex][1]}</span></div>
-          <span className="micro-label">GO WITH THE GUT ANSWER</span>
-          <h3>{SAME_PAGE_QUESTIONS[questionIndex]}</h3>
-          <div className="sync-choice-pair">{questionAnswers.map((choice, optionIndex) => <button type="button" key={choice} className={answerRows[questionIndex] === choice ? 'is-chosen' : ''} aria-pressed={answerRows[questionIndex] === choice} onClick={() => select(questionIndex, choice)}><span className="sync-choice-art">{SAME_PAGE_ICONS[questionIndex][optionIndex]}</span><b>{choice}</b><small>{optionIndex === 0 ? 'THE FIRST INSTINCT' : 'THE OTHER INSTINCT'}</small><ArrowRight size={16} /></button>)}</div>
+function Message({ msg, set, mine, theirs, done, nameOf, complete, hint }) {
+  const marks = msg.marks || [];
+  const ownLines = mine === 'A' ? [0, 1, 2, 3] : [4, 5, 6, 7, 8];
+  const toggle = id => set(old => ({ marks: (old.marks || []).includes(id) ? old.marks.filter(m => m !== id) : [...(old.marks || []), id] }));
+  return <>
+    <div className="pr-telegram">
+      <header className="pr-telegram-head">
+        <span className="pr-radio"><Radio size={24} weight="duotone" /></span>
+        <span><span className="micro">Recovered transmission</span><small>Inbound · 98.4 MHz</small></span>
+        <svg className="pr-wave" viewBox="0 0 120 30" aria-hidden="true"><path d="M0 15 Q 7 2 15 15 T 30 15 T 45 15 T 60 15 T 75 15 T 90 15 T 105 15 T 120 15" /></svg>
+      </header>
+      <ol className="pr-lines">
+        {MESSAGE.map((line, li) => {
+          const own = ownLines.includes(li);
+          return <motion.li key={li} className={`${own ? '' : 'is-theirs'} ${li === 4 ? 'is-break' : ''}`} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .15 + li * .06, type: 'spring', stiffness: 200, damping: 22 }}>
+            <i>{pad(li + 1)}</i>
+            {own ? <span className="pr-words">{line.split(' ').map((w, wi) => {
+              const id = `${li}-${wi}`;
+              const on = marks.includes(id);
+              return <button type="button" key={id} className={`pr-word ${on ? 'is-marked' : ''}`} onClick={() => toggle(id)} aria-pressed={on}>
+                {w}
+                <svg viewBox="0 0 100 40" preserveAspectRatio="none" aria-hidden="true"><path d="M8 22 C 6 6, 90 2, 94 18 C 98 34, 14 40, 6 24 C 4 18, 20 10, 34 9" /></svg>
+              </button>;
+            })}</span> : <span className="pr-redacted" aria-label={`${nameOf(theirs)} holds this line`}><span style={{ width: `${40 + (line.length % 5) * 11}%` }} /></span>}
+          </motion.li>;
+        })}
+      </ol>
+      <span className="pr-telegram-stamp" aria-hidden="true">{nameOf(theirs)}'s half</span>
+    </div>
+    <AnswerLock accept={['ORBIT']} onSolve={complete} solved={done} solvedText="ORBIT. Its first letter, O, is yours." placeholder="The hidden word" label="Send it" />
+    {!done && <HintLadder hints={[
+      `Read only the first letter of each line in ${nameOf('A')}'s half.`,
+      `Those letters spell TAKE. Now look at the third word of each line in ${nameOf('B')}'s half.`,
+      'Take the first letter of each of those five third words, in order.',
+    ]} {...hint} onReveal={complete} />}
+    <HowItWorks>{'Tap any word in your half to circle it in pencil. Read your lines to each other, work out the hidden five-letter word, and send it. Nothing is case-sensitive.'}</HowItWorks>
+  </>;
+}
+
+// 03 Field Evidence
+
+function Evidence({ ev, set, mine, theirs, done, nameOf, complete }) {
+  const rows = ev.responses?.[mine] || ['', '', ''];
+  const stamped = ev.stamped?.[mine] || [];
+  const write = (i, value) => set(old => {
+    const next = [...(old.responses?.[mine] || ['', '', ''])]; next[i] = value;
+    return { responses: { ...old.responses, [mine]: next } };
+  });
+  const seal = (i, el) => {
+    if (!rows[i]?.trim() || stamped.includes(i)) return;
+    const next = [...stamped, i];
+    burstFrom(el, { shape: 'star', count: 18 });
+    set(old => ({ stamped: { ...old.stamped, [mine]: next } }));
+    if (next.length >= 3 && !done) complete();
+  };
+  return <>
+    <div className="pr-evidence">
+      <PocketWatch seconds={240} />
+      <svg className="pr-string" viewBox="0 0 300 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 8 Q 150 46 300 8" /></svg>
+      <div className="pr-tags">
+        {EVIDENCE.map(({ title, hint, Icon }, i) => {
+          const isSealed = stamped.includes(i) || done;
+          return <motion.form key={title} className={`pr-tag ${isSealed ? 'is-sealed' : ''}`} style={{ '--sway': `${i % 2 ? 1.6 : -1.6}deg`, '--d': `${i * .7}s` }}
+            initial={{ y: -40, opacity: 0, rotate: i % 2 ? 6 : -6 }} animate={{ y: 0, opacity: 1, rotate: 0 }} transition={{ type: 'spring', stiffness: 180, damping: 12, delay: .1 + i * .12 }}
+            onSubmit={e => { e.preventDefault(); seal(i, e.currentTarget); }}>
+            <span className="pr-tag-hole" aria-hidden="true" />
+            <span className="pr-tag-icon"><Icon size={24} weight="duotone" /></span>
+            <b>{title}</b>
+            <small>{hint}</small>
+            <input value={rows[i] || ''} onChange={e => write(i, e.target.value)} disabled={isSealed} placeholder={`${nameOf(theirs)}'s story for it`} aria-label={`${nameOf(theirs)}'s story for: ${title}`} />
+            {!isSealed && <motion.button type="submit" className="pr-tag-stamp" disabled={!rows[i]?.trim()} whileTap={{ scale: .85, rotate: -12 }} aria-label="Stamp this tag"><Stamp size={20} weight="duotone" /></motion.button>}
+            <AnimatePresence>{isSealed && <motion.span className="pr-tag-seal" initial={{ scale: 2.2, opacity: 0, rotate: -30 }} animate={{ scale: 1, opacity: 1, rotate: -12 }} transition={{ type: 'spring', stiffness: 420, damping: 16 }}>Filed</motion.span>}</AnimatePresence>
+          </motion.form>;
+        })}
+      </div>
+    </div>
+    <HowItWorks>{`Start the watch and hunt for three things at once. Take turns showing one on camera; the other invents its story, then you tell the real one. Write their story on the tag and stamp it. Three stamped tags earn G.`}</HowItWorks>
+  </>;
+}
+
+function PocketWatch({ seconds }) {
+  const [left, setLeft] = useState(seconds);
+  const [running, setRunning] = useState(false);
+  useEffect(() => {
+    if (!running) return undefined;
+    const id = setInterval(() => setLeft(v => Math.max(0, v - 1)), 1000);
+    return () => clearInterval(id);
+  }, [running]);
+  useEffect(() => { if (left === 0) setRunning(false); }, [left]);
+  const r = 26; const c = 2 * Math.PI * r;
+  return <div className={`pr-watch ${running ? 'is-running' : ''} ${left === 0 ? 'is-out' : ''}`}>
+    <motion.button type="button" className="pr-watch-face" onClick={() => left > 0 && setRunning(v => !v)} whileTap={{ scale: .9, rotate: -6 }} aria-label={running ? 'Pause the timer' : 'Start the four-minute timer'}>
+      <svg viewBox="0 0 64 64" aria-hidden="true">
+        <circle className="pr-watch-track" cx="32" cy="32" r={r} />
+        <circle className="pr-watch-fill" cx="32" cy="32" r={r} strokeDasharray={c} strokeDashoffset={c * (1 - left / seconds)} />
+        <line className="pr-watch-hand" x1="32" y1="32" x2="32" y2="12" style={{ transform: `rotate(${(1 - left / seconds) * 360}deg)` }} />
+      </svg>
+      <span>{Math.floor(left / 60)}:{pad(left % 60)}</span>
+      <i>{running ? <Pause size={12} weight="fill" /> : <Play size={12} weight="fill" />}</i>
+    </motion.button>
+    {!running && left < seconds && <button type="button" className="pr-watch-reset" onClick={() => setLeft(seconds)} aria-label="Reset the timer"><ArrowCounterClockwise size={15} /></button>}
+  </div>;
+}
+
+// 04 The Archive
+
+function Archive({ archive, set, mine, theirs, done, nameOf, complete }) {
+  const [copied, setCopied] = useState(false);
+  const text = archive.texts?.[mine] || '';
+  const words = countWords(text);
+  const ticks = archive.ticks || [];
+  const lower = ` ${text.toLowerCase().replace(/[^a-z\s]/g, ' ')} `;
+  const write = value => set(old => ({ texts: { ...old.texts, [mine]: value } }));
+  const copy = async () => {
+    try { await navigator.clipboard.writeText(`${PROMPT}\n\n${nameOf(mine)}'s scene:\n${text}`); setCopied(true); setTimeout(() => setCopied(false), 2200); }
+    catch { setCopied(false); }
+  };
+  return <>
+    <div className="pr-archive">
+      <div className="pr-card">
+        <span className="pr-card-tab micro">Archive · case 05Y</span>
+        <h3>“It is an entirely normal Tuesday, five years from now. Nothing dramatic happens. Somehow, this is the scene you remember.”</h3>
+        <div className="pr-constraints">
+          {CONSTRAINTS.map(item => {
+            const on = ticks.includes(item);
+            return <motion.button type="button" key={item} className={`pr-check ${on ? 'is-on' : ''}`} whileTap={{ scale: .9 }} aria-pressed={on}
+              onClick={() => set(old => ({ ticks: (old.ticks || []).includes(item) ? old.ticks.filter(t => t !== item) : [...(old.ticks || []), item] }))}>
+              <svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2" y="2" width="16" height="16" rx="3" /><motion.path d="M5 10 L9 14 L16 5" initial={false} animate={{ pathLength: on ? 1 : 0 }} transition={{ type: 'spring', stiffness: 300, damping: 22 }} /></svg>{item}
+            </motion.button>;
+          })}
         </div>
-        <nav className="sync-question-trail" aria-label="Choose a question">{SAME_PAGE.map(([first], index) => <button type="button" key={first} className={`${index === questionIndex ? 'is-current' : ''} ${answerRows[index] ? 'is-answered' : ''}`} aria-label={`Question ${index + 1}${answerRows[index] ? ', answered' : ''}`} aria-current={index === questionIndex ? 'step' : undefined} onClick={() => patchSection('samePage', { questionIndex: index })}>{answerRows[index] ? <Check size={12} weight="bold" /> : String(index + 1).padStart(2, '0')}</button>)}</nav>
-        <div className="sync-turn-footer"><b>{answerCount} / 10</b><span>picked by Player {role}. Their choices stay hidden.</span><i><span style={{ width: `${answerCount * 10}%` }} /></i></div>
-        <div className="simultaneous-bar"><span>{ready ? `Both finished · ${sameCount} of 10 matched` : `Hand over the screen when Player ${role} is done.`}</span><Button disabled={!ready} onClick={() => patchSection('samePage', { revealed: !sync.revealed })}>{sync.revealed ? 'Hide the reveal' : 'Reveal together'}<ArrowRight size={16} /></Button></div>
-        {sync.revealed && <div className="sync-result"><span className="sync-emoji">{sameCount >= 7 ? '✦' : sameCount >= 5 ? '♡' : '↗'}</span><div><span className="micro-label">Together, you matched</span><strong>{sameCount} of 10</strong><p>{sameCount >= 7 ? 'A mind-meld. Suspiciously efficient.' : sameCount >= 5 ? 'A few shared instincts and plenty to talk about.' : 'Two delightful cryptographic anomalies. Excellent work.'}</p></div></div>}
-      </section>
-      {sync.revealed && <section className="riddle-panel"><span className="micro-label">One soft final riddle</span><h3>“I can be carried without hands. I can be shared without dividing. I can be broken without making a sound. What am I?”</h3><div className="riddle-input"><input value={sync.riddle || ''} onChange={e => patchSection('samePage', { riddle: e.target.value })} onKeyDown={e => { if (e.key === 'Enter' && riddleReady) markComplete('samePage'); }} placeholder="A small promise?"/><Button kind="berry" onClick={() => markComplete('samePage') } disabled={!riddleReady}>Unlock the last three keys</Button></div><p>If it becomes a hassle, type <button className="inline-answer" onClick={recoverRiddle}>promise</button>. Trust and silence count too.</p></section>}
-      {hintBox(['It is something two people make to each other.', 'It can be kept, made, or broken.', 'Promise is the intended answer.'], 'Skip the riddle and keep the ending')}
-      {footer('We solved it together')}
-    </>;
+        <p className="pr-banned">Skip {BANNED.map(w => <span key={w} className={lower.includes(` ${w} `) ? 'is-hit' : ''}>{w}</span>)}</p>
+        <AnimatePresence>{done && <motion.span className="pr-archived" initial={{ scale: 2, opacity: 0, rotate: 10 }} animate={{ scale: 1, opacity: 1, rotate: -8 }} transition={{ type: 'spring', stiffness: 380, damping: 16 }}>Archived</motion.span>}</AnimatePresence>
+      </div>
+      <div className="pr-paper">
+        <textarea value={text} onChange={e => write(e.target.value)} readOnly={done} placeholder="The kettle makes its small angry noise…" maxLength={2400} aria-label="Your Tuesday scene" />
+        <span className={`pr-count ${words >= 130 ? 'is-good' : ''}`}>{words < 40 ? `${words} / 40 words to file` : `${words} words`} · aim for 130–180</span>
+      </div>
+      <div className="pr-referee">
+        <span className="pr-referee-seal" aria-hidden="true"><Sparkle size={18} weight="fill" /></span>
+        <p><b>The referee.</b> Copy the judge prompt with your scene, paste it into Claude or ChatGPT, then {nameOf(theirs)} adds theirs to the same chat.</p>
+        <Button kind="ghost" onClick={copy} disabled={!text.trim()}><Copy size={16} /> {copied ? 'Copied' : 'Copy for the referee'}</Button>
+      </div>
+    </div>
+    {!done && <Button onClick={complete} disabled={words < 40}><Stamp size={17} weight="duotone" /> File my Tuesday</Button>}
+    <HowItWorks>{'Write privately: tiny real details beat big feelings. When both scenes are with the referee, read its verdict together and talk about one surprising detail. Then file your page to earn E.'}</HowItWorks>
+  </>;
+}
+
+// 05 Dixit at Distance
+
+function Dixit({ dixit, set, mine, theirs, done, nameOf, complete }) {
+  const [photo, setPhoto] = useState('');
+  const [opening, setOpening] = useState(done);
+  const words = dixit.interpretations?.[mine] || '';
+  const sealed = dixit.sealed?.[mine] || done;
+  const ready = countWords(words) === 3;
+  useEffect(() => () => photo && URL.revokeObjectURL(photo), [photo]);
+  const pick = e => { const file = e.target.files?.[0]; if (file) setPhoto(URL.createObjectURL(file)); };
+  const open = el => { if (opening) return; setOpening(true); burstFrom(el, { shape: ['heart', 'petal'], count: 40 }); setTimeout(complete, 900); };
+  return <>
+    <div className="pr-dixit">
+      <div className="pr-prompt-card">
+        <span className="micro">Your shared prompt</span>
+        <h3>“This is what being understood feels like.”</h3>
+      </div>
+      <label className="pr-polaroid">
+        <input type="file" accept="image/*" onChange={pick} className="sr-only" />
+        <motion.span className="pr-polaroid-frame" whileTap={{ scale: .94, rotate: 2 }} animate={{ rotate: -3 }}>
+          {photo ? <img src={photo} alt="Your chosen image" /> : <span className="pr-polaroid-empty"><ImageIcon size={28} weight="light" /><small>Your pick, just for you</small></span>}
+        </motion.span>
+      </label>
+      <div className={`pr-envelope ${sealed ? 'is-sealed' : ''} ${opening ? 'is-open' : ''}`}>
+        <svg className="pr-env-back" viewBox="0 0 300 180" preserveAspectRatio="none" aria-hidden="true"><rect x="1" y="1" width="298" height="178" rx="10" /></svg>
+        <motion.div className="pr-letter" animate={{ y: opening ? -70 : 0 }} transition={{ type: 'spring', stiffness: 160, damping: 14 }}>
+          {sealed ? <p className="pr-three">{words}</p>
+            : <><span className="micro">Three words: why did {nameOf(theirs)} choose theirs?</span>
+              <input value={words} onChange={e => set(old => ({ interpretations: { ...old.interpretations, [mine]: e.target.value } }))} placeholder="Three words" aria-label="Your three words" />
+              <span className="pr-ink-slots" aria-hidden="true">{[0, 1, 2].map(i => <i key={i} className={i < countWords(words) ? 'is-inked' : ''} />)}</span></>}
+        </motion.div>
+        <motion.svg className="pr-env-flap" viewBox="0 0 300 100" preserveAspectRatio="none" aria-hidden="true" animate={{ rotateX: sealed && !opening ? 0 : 180 }} transition={{ type: 'spring', stiffness: 140, damping: 16 }}>
+          <path d="M2 2 L150 92 L298 2 Z" />
+        </motion.svg>
+        <AnimatePresence>{sealed && !opening && <motion.button type="button" className="pr-wax" onClick={e => open(e.currentTarget)} initial={{ scale: 0, rotate: -40 }} animate={{ scale: 1, rotate: 0 }} exit={{ scale: 0, opacity: 0 }} whileTap={{ scale: .88 }} transition={{ type: 'spring', stiffness: 380, damping: 14 }} aria-label="Break the seal">
+          <Heart size={22} weight="fill" />
+        </motion.button>}</AnimatePresence>
+      </div>
+      {!sealed && <Button onClick={() => set(old => ({ sealed: { ...old.sealed, [mine]: true } }))} disabled={!ready}>Seal the envelope</Button>}
+      {sealed && !done && <p className="pr-countdown-note">Count down from three, then both break your seals and read your words aloud.</p>}
+    </div>
+    <HowItWorks>{`Pick your image in secret and send it at the same moment. Look at ${nameOf(theirs)}'s, then guess in exactly three words why they chose it. Seal, break the seals together, then tell each other the real story. Matching is not the goal.`}</HowItWorks>
+  </>;
+}
+
+// 06 Same Page
+
+function SamePage({ sync, set, mine, theirs, done, nameOf, complete, hint }) {
+  const answers = sync.answers?.[mine] || Array(10).fill('');
+  const next = answers.findIndex(a => !a);
+  const allPicked = next < 0;
+  const matches = sync.matches || [];
+  const pick = (q, choice) => set(old => {
+    const rows = [...(old.answers?.[mine] || Array(10).fill(''))]; rows[q] = choice;
+    return { answers: { ...old.answers, [mine]: rows } };
+  });
+  const toggleMatch = i => set(old => ({ matches: (old.matches || []).includes(i) ? old.matches.filter(m => m !== i) : [...(old.matches || []), i] }));
+  const verdict = matches.length >= 7 ? 'A mind-meld. Suspiciously efficient.' : matches.length >= 5 ? 'A few shared instincts and plenty to talk about.' : 'Two delightful anomalies. Excellent work.';
+
+  return <>
+    {!allPicked ? <div className="pr-deck">
+      <div className="pr-deck-stack" aria-hidden="true">{Array.from({ length: Math.min(3, 9 - next) }, (_, i) => <span key={i} style={{ '--n': i + 1 }} />)}</div>
+      <AnimatePresence mode="wait">
+        <motion.div key={next} className="pr-question" initial={{ opacity: 0, y: 30, rotate: 3 }} animate={{ opacity: 1, y: 0, rotate: 0 }} exit={{ opacity: 0, x: -80, rotate: -10 }} transition={{ type: 'spring', stiffness: 240, damping: 22 }}>
+          <span className="micro">Your pick, privately</span>
+          <h3>{SAME_PAGE_QUESTIONS[next]}</h3>
+          <div className="pr-pair">{SAME_PAGE[next].map((choice, o) => {
+            const Icon = SAME_PAGE_ICONS[next][o];
+            return <motion.button type="button" key={choice} className="pr-choice" onClick={() => pick(next, choice)} whileHover={{ y: -4, rotate: o ? 1.5 : -1.5 }} whileTap={{ scale: .9 }}>
+              <span className="pr-choice-art"><Icon size={34} weight="duotone" /></span><b>{choice}</b>
+            </motion.button>;
+          })}</div>
+        </motion.div>
+      </AnimatePresence>
+    </div> : <>
+      <div className="pr-picks">
+        <p className="pr-picks-head">Read your ten to {nameOf(theirs)}. Tap a heart wherever you matched.</p>
+        <ol>{answers.map((a, i) => {
+          const on = matches.includes(i);
+          return <motion.li key={i} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .04 }}>
+            <span>{SAME_PAGE_QUESTIONS[i]}</span><b>{a}</b>
+            <motion.button type="button" className={`pr-heart ${on ? 'is-on' : ''}`} onClick={() => toggleMatch(i)} aria-pressed={on} aria-label={`We matched on ${a}`} whileTap={{ scale: .7 }} animate={{ scale: on ? [1, 1.35, 1] : 1 }}>
+              <Heart size={20} weight={on ? 'fill' : 'regular'} />
+            </motion.button>
+          </motion.li>;
+        })}</ol>
+        <AnimatePresence>{matches.length > 0 && <motion.p className="pr-verdict" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}><b>{matches.length} of 10.</b> {verdict}</motion.p>}</AnimatePresence>
+      </div>
+      <div className="pr-riddle">
+        <span className="micro">One soft final riddle</span>
+        <h3>“I can be carried without hands. I can be shared without dividing. I can be broken without making a sound. What am I?”</h3>
+      </div>
+      <AnswerLock accept={['PROMISE', 'APROMISE', 'TRUST', 'SILENCE']} onSolve={complete} solved={done} solvedText="A promise. That is H, E and R." placeholder="Your answer" label="Answer" />
+      {!done && <HintLadder hints={['It is something two people make to each other.', 'It can be kept, made or broken.']} {...hint} onReveal={complete} />}
+    </>}
+    <HowItWorks>{'Each of you picks on your own phone, no talking your way into a match. When both are done, read your picks to each other, count your matches, and solve the riddle together.'}</HowItWorks>
+  </>;
+}
+
+// Vault
+
+function Vault({ completed, complete }) {
+  const [turning, setTurning] = useState(false);
+  const reduced = useReducedMotion();
+  const solve = () => { setTurning(true); setTimeout(complete, reduced ? 0 : 1100); };
+  return <>
+    <div className={`pr-vault ${turning ? 'is-turning' : ''}`}>
+      <svg className="pr-vault-door" viewBox="0 0 200 200" aria-hidden="true">
+        <circle cx="100" cy="100" r="92" className="pr-vault-rim" />
+        <circle cx="100" cy="100" r="74" className="pr-vault-plate" />
+        <g className="pr-vault-dial">{Array.from({ length: 24 }, (_, i) => <line key={i} x1="100" y1="34" x2="100" y2={i % 3 ? 40 : 44} transform={`rotate(${i * 15} 100 100)`} />)}
+          <circle cx="100" cy="100" r="22" /><path d="M100 78 V60" /></g>
+      </svg>
+      <div className="key-strip pr-vault-key">{KEY.map(([id, letter], i) => <span key={i} className={completed.includes(id) ? 'is-earned' : ''} style={{ animationDelay: `${.25 + i * .09}s` }}>{completed.includes(id) ? letter : ''}</span>)}</div>
+    </div>
+    <AnswerLock accept={['TOGETHER']} onSolve={solve} solved={turning} solvedText="The dial is turning…" placeholder="Eight letters" label="Turn the key" />
+    <HowItWorks>{'The letters you earned are the passcode, in the order you earned them. Say it out loud together, then type it in.'}</HowItWorks>
+  </>;
+}
+
+// Finale, chaos cards, stamp
+
+function ClosingPlan({ value, onChange }) {
+  return <div className="pr-postcard">
+    <span className="pr-postcard-stamp" aria-hidden="true"><Heart size={18} weight="fill" /></span>
+    <label htmlFor="pr-plan">Choose one thing you will actually do together, and put it on the calendar.</label>
+    <input id="pr-plan" value={value} onChange={e => onChange(e.target.value)} placeholder="Our next thing" autoComplete="off" />
+  </div>;
+}
+
+function ChaosSheet({ open, onClose, drawn, onDraw }) {
+  const left = Math.max(0, 2 - drawn.length);
+  const draw = () => {
+    const pool = SIDEQUESTS.map((_, i) => i).filter(i => !drawn.includes(i));
+    if (left && pool.length) onDraw(pool[Math.floor(Math.random() * pool.length)]);
   };
+  return <Sheet open={open} onClose={onClose} title="Tiny chaos">
+    <div className="pr-chaos">
+      {drawn.length === 0 && <p className="pr-chaos-intro">An optional side quest for a break between stops. Two draws a night.</p>}
+      {drawn.map((i, n) => SIDEQUESTS[i] && <motion.article key={i} className="pr-chaos-card" initial={{ rotateY: 90, opacity: 0 }} animate={{ rotateY: 0, opacity: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 16 }} style={{ '--tilt': `${n ? 2 : -2}deg` }}>
+        <h4>{SIDEQUESTS[i].title}</h4><p>{SIDEQUESTS[i].text}</p>
+      </motion.article>)}
+      {left > 0 && <Button onClick={draw}><Cards size={16} /> Draw a card</Button>}
+    </div>
+  </Sheet>;
+}
 
-  const renderVault = () => {
-    const correct = (state.codeInput || '').trim().toUpperCase().replace(/\s/g, '') === 'TOGETHER';
-    if (state.vaultOpen || correct) return <div className="vault-open"><span className="vault-burst">✦</span><span className="micro-label">The Distance Protocol is complete</span><h2>You made it <em>together.</em></h2><p>Each of you gets one sentence. What part of tonight would you keep if you could never replay it?</p><div className="final-reward-grid"><button onClick={() => patch(old => ({ ...old, reward: 'Plan the next date' }))}>Plan the next date</button><button onClick={() => patch(old => ({ ...old, reward: 'Pick a film and snack' }))}>Pick a film + snack</button><button onClick={() => patch(old => ({ ...old, reward: 'Make a shared playlist' }))}>Make a shared playlist</button><button onClick={() => patch(old => ({ ...old, reward: 'Write the next chapter' }))}>Write the next chapter</button></div>{state.reward && <p className="reward-picked"><Check size={16} /> Tonight's reward: {state.reward}</p>}</div>;
-    return <>
-      <div className="vault-locked"><span className="vault-lock"><LockKey size={25} /></span><span className="micro-label">The last little lock</span><h2>Put your earned letters in order.</h2><p>They are already here. Keep them in checkpoint order; no rearranging needed.</p><div className="letter-trail">{keys.map((letter, i) => <span key={`${letter}-${i}`}>{letter}</span>)}</div><form className="vault-code-form" onSubmit={e => { e.preventDefault(); if (correct) patch({ vaultOpen: true }); }}><label htmlFor="vault-code">Passcode</label><div><input id="vault-code" value={state.codeInput || ''} onChange={e => patch({ codeInput: e.target.value })} placeholder="Eight letters" autoComplete="off"/><Button type="submit" disabled={!correct}>Open the vault<ArrowRight size={16} /></Button></div></form><details className="vault-hint"><summary>One last hint</summary><p>Read the letters as one word about what your team did tonight. If you want the reveal now, the code is <button type="button" className="inline-answer" onClick={() => patch({ codeInput: 'TOGETHER', vaultOpen: true })}>TOGETHER</button>.</p></details></div>
-      <div className="vault-footer-note"><Heart size={16} /> Finish with one sentence each, then choose a tiny reward to actually do.</div>
-    </>;
-  };
-
-  const renderCurrent = () => {
-    if (stage.id === 'split') return renderSplit();
-    if (stage.id === 'message') return renderMessage();
-    if (stage.id === 'evidence') return renderEvidence();
-    if (stage.id === 'archive') return renderArchive();
-    if (stage.id === 'dixit') return renderDixit();
-    if (stage.id === 'samePage') return renderSamePage();
-    return renderVault();
-  };
-
-  const renderSidequests = () => <details className="sidequest-drawer"><summary><span><Shuffle size={18} /> Tiny chaos menu</span><span>Six optional side quests</span></summary><div className="sidequest-list">{SIDEQUESTS.map((quest, index) => {
-    const done = (state.sidequests || []).includes(index);
-    return <article key={quest.title} className={done ? 'sidequest-done' : ''}><span className="sidequest-number">0{index + 1}</span><div><h4>{quest.title}</h4><p>{quest.text}</p></div><button className="sidequest-toggle" onClick={() => patch(old => ({ ...old, sidequests: done ? old.sidequests.filter(v => v !== index) : [...(old.sidequests || []), index] }))}>{done ? <Check size={17} /> : <ArrowRight size={17} />}</button></article>;
-  })}</div></details>;
-
-  const stageItems = STAGES.map((item, index) => ({ ...item, locked: index === 6 && !completed.includes('samePage') }));
-  if (!state.started) return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="rose">
-    <RouteBriefing variant="paper" nodes={BRIEFING_STOPS} tagline="A little mystery, made for two."
-      number="GAME 01"
-      name="The Distance Protocol"
-      subtitle="A cozy co-op mystery with clues, stories, and a shared final vault."
-      time="75–100 minutes"
-      objective="Work through six short chapters together. Each one earns letters or clues for the next. Put your collected letters into the final vault and open the shared ending."
-      whatYouNeed="A video call, paper and pen, a phone for sending photos, and a drink. No advance prep."
-      selectedRole={state.introRole || 'A'}
-      audioSrc="/audio/rules/protocol.mp3"
-      onSelectRole={role => patch({ introRole: role })}
-      roles={{
-        A: { name: 'Him · Player A', summary: 'His clue book and private Split Key word list.' },
-        B: { name: 'Her · Player B', summary: 'Her clue book and private Split Key word list.' },
-      }}
-      steps={[
-        { title: 'Choose who reads first.', text: 'His route is Player A and hers is Player B. Open the matching clue book below; keep private pages to yourself and say the clues in your own words.' },
-        { title: 'Play the six chapters in order.', text: 'Split Key is a clue-and-guess grid. The Message is a two-layer text puzzle. Field Evidence is a quick object hunt. The Archive is a future-Tuesday writing prompt. Dixit at Distance is a shared image-guessing prompt. Same Page is ten quick choices and a final riddle.' },
-        { title: 'Share your answers and keep every key.', text: 'Enter a shared answer when asked. The site saves earned keys and moves you forward. You can pause, switch sides, or return to a chapter.' },
-        { title: 'Use a hint whenever you want.', text: 'Hints arrive one at a time. If the puzzle has stopped being fun, choose the rescue button and take the answer. Nothing is lost.' },
-      ]}
-      rulebook={[
-        { title: 'The goal', text: 'Finish the six checkpoints as one team. Record every key letter in the on-screen key ring. Use the complete set to open the final vault. There is no score and no penalty for hints.' },
-        { title: 'Private information', text: 'Some parts are intentionally different for Player A and Player B. Open only your own His or Her route, read your page, then paraphrase it. Do not show the other person a private card unless a step asks you to reveal together.' },
-        { title: '01 · Split Key', text: 'Take turns giving exactly one word and one number as a clue. Your partner guesses from the shared grid. Use the secret word lists on the His and Her routes. No spelling, rhyming, gestures, or extra hints are needed. Keep going gently; the screen tracks targets found.' },
-        { title: '02 · The Message', text: 'Read the short text carefully. The first layer tells you how to extract a second hidden word. Enter the shared result to collect its key.' },
-        { title: '03 · Field Evidence', text: 'Each person finds a few nearby objects for the prompts. Show them one at a time, let the other person guess the memory or meaning, then explain. The timer is optional.' },
-        { title: '04 · The Archive', text: 'Write 130–180 words about an ordinary Tuesday five years from now. Follow the on-screen constraints. Paste both pieces into the same AI chat with the provided judge prompt. The judge compares concrete details and overlap; it does not rank who cares more.' },
-        { title: '05 · Dixit at Distance', text: 'Choose a photo for the same abstract prompt without showing it. Reveal together, guess what the other person saw in it, then tell the real story. There is no correct image.' },
-        { title: '06 · Same Page and the Vault', text: 'Answer ten either-or questions at the same time, compare your choices, and solve the final gentle riddle. Bring all the earned letters to the vault.' },
-        { title: 'Breaks and side quests', text: 'Side quests are optional. Pause, skip one, or take a snack break whenever either person wants. Keep the parts that feel fun.' },
-      ]}
-      onStart={role => patch({ started: true, introRole: role, split: { ...state.split, role }, evidence: { ...state.evidence, role }, archive: { ...state.archive, role }, dixit: { ...state.dixit, role }, samePage: { ...state.samePage, role } })}
-      onReadRulebook={onLibrary}
-      onReadPlayerRoute={role => onPlayerRoute(role === 'A' ? '/his' : '/hers')}
-    />
-  </GameFrame>;
-  return <GameFrame title="The Distance Protocol" eyebrow="Game 01 · the long-distance mystery" subtitle="A two-person co-op night. Six little locks, one shared ending." icon={<span className="protocol-emblem">♡</span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="rose" playMode aside={<><PlayerLinks onPlayerRoute={onPlayerRoute} /><button className="library-shortcut" onClick={() => patch({ started: false })}><BookOpenText size={17} /> How to play</button><button className="library-shortcut" onClick={onLibrary}><BookOpenText size={17} /> Source pages</button></>}>
-    <div className="protocol-progress"><div><span className="micro-label">Vault letters</span><strong>{keys.length}<small>/8</small></strong></div><div className="earned-letters">{Array.from({ length: 8 }, (_, index) => keys[index] ? <span key={`key-${index}`}>{keys[index]}</span> : <span className="letter-empty" key={`empty-${index}`}>·</span>)}</div><div className="protocol-progress-right"><span><Heart size={15} /> Team progress</span><span>{completed.filter(id => id !== 'vault').length}/6</span></div></div>
-    <ChapterMenu items={stageItems} active={stageIndex} completed={completed} onSelect={goStage}/>
-    <section className="stage-main"><div className="stage-heading"><div><span className="micro-label">{stage.id === 'vault' ? 'Final unlock' : `${stage.time} · one checkpoint`}</span><h2>{stage.title}</h2></div>{stage.id !== 'vault' && <div className="stage-key-pill">Key <b>{stage.letter}</b></div>}</div>{renderCurrent()}</section>
-    {stage.id === 'vault' ? null : renderSidequests()}
-    <p className="save-note"><Check size={14} /> Your progress saves in this browser automatically.</p>
-  </GameFrame>;
+function StampOverlay({ stamp, onDone }) {
+  const reduced = useReducedMotion();
+  const done = useRef(onDone);
+  done.current = onDone;
+  useEffect(() => {
+    if (!stamp) return undefined;
+    const id = setTimeout(() => done.current(), reduced ? 600 : 1500);
+    return () => clearTimeout(id);
+  }, [stamp, reduced]);
+  return <AnimatePresence>{stamp && <motion.div key={stamp.key} className="pr-stamp-overlay" aria-live="polite" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.div className="pr-stamp" initial={{ scale: 2.6, rotate: -28, opacity: 0 }} animate={{ scale: 1, rotate: -9, opacity: 1 }} exit={{ scale: .8, opacity: 0, y: -30 }} transition={{ type: 'spring', stiffness: 420, damping: 17 }}>
+      <svg viewBox="0 0 160 160" aria-hidden="true"><circle cx="80" cy="80" r="72" /><circle cx="80" cy="80" r="60" /><path id="pr-arc" d="M28 80 A52 52 0 0 1 132 80" fill="none" /><text><textPath href="#pr-arc" startOffset="50%" textAnchor="middle">KEY EARNED</textPath></text></svg>
+      <b>{stamp.letter.split('').join(' ')}</b>
+      <span className="sr-only">You earned {stamp.letter}</span>
+    </motion.div>
+  </motion.div>}</AnimatePresence>;
 }

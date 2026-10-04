@@ -1,0 +1,258 @@
+.w-case-world,
+.w-case-parallax,
+.w-case-entry {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.w-case-world {
+  color: var(--tone, #e2564f);
+  isolation: isolate;
+}
+
+.w-case-parallax {
+  will-change: transform;
+}
+
+.w-case-parallax--far { z-index: 0; }
+.w-case-parallax--mid { z-index: 1; }
+.w-case-parallax--near { z-index: 2; }
+.w-case-parallax--close { z-index: 3; }
+
+.w-case-entry {
+  opacity: 0;
+  animation: w-case-arrive .96s cubic-bezier(.18, .76, .24, 1) both;
+}
+
+.w-case-entry--far { animation-delay: .04s; }
+.w-case-entry--mid { animation-delay: .23s; }
+.w-case-entry--near { animation-delay: .42s; }
+.w-case-entry--close { animation-delay: .6s; }
+
+.w-case-window-sheen {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 29%;
+  background: linear-gradient(90deg, rgba(127, 170, 194, .035), rgba(111, 147, 170, .016) 68%, transparent);
+  mix-blend-mode: screen;
+}
+
+.w-case-rain {
+  position: absolute;
+  inset: 0;
+  width: 29%;
+  overflow: hidden;
+}
+
+.w-case-drop {
+  position: absolute;
+  display: block;
+  width: 1px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, transparent, rgba(191, 218, 234, .42) 35%, rgba(153, 194, 219, .13) 78%, transparent);
+  opacity: .18;
+  transform: translate3d(0, -9vh, 0);
+  animation: w-case-rain-fall linear infinite;
+  will-change: transform, opacity;
+}
+
+.w-case-mist {
+  position: absolute;
+  width: 30vw;
+  height: 19vh;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(190, 203, 209, .095), rgba(151, 166, 177, .035) 42%, transparent 73%);
+  opacity: .2;
+  mix-blend-mode: screen;
+  will-change: transform, opacity;
+  animation: w-case-mist-drift 19s ease-in-out infinite alternate;
+}
+
+.w-case-mist--left {
+  left: -18vw;
+  top: 54%;
+  transform: translate3d(0, 0, 0);
+}
+
+.w-case-mist--right {
+  right: -20vw;
+  top: 69%;
+  animation-delay: -8s;
+  animation-duration: 23s;
+}
+
+.w-case-flash {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(179, 204, 222, .13), rgba(153, 179, 198, .035) 22%, transparent 44%);
+  opacity: 0;
+  animation: w-case-lightning 28s linear infinite;
+  will-change: opacity;
+}
+
+.w-case-thread {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.w-case-thread--portrait { display: none; }
+
+.w-case-thread-drift {
+  fill: #b73434;
+  stroke: #9f2929;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .76;
+  transform-box: view-box;
+  transform-origin: 0% 90%;
+  animation: w-case-thread-sway 7.5s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+.w-case-thread-drift path {
+  fill: none;
+  stroke-width: 2.1;
+}
+
+.w-case-lamp-wash {
+  position: absolute;
+  left: -13%;
+  bottom: -7%;
+  width: 43vw;
+  height: 39vh;
+  border-radius: 50%;
+  background: radial-gradient(ellipse, rgba(238, 172, 91, .14), rgba(223, 148, 68, .065) 35%, transparent 72%);
+  opacity: .42;
+  mix-blend-mode: screen;
+  animation: w-case-lamp-breathe 8s ease-in-out infinite alternate;
+  will-change: opacity;
+}
+
+.w-case-lamp-cone {
+  position: absolute;
+  left: -8%;
+  bottom: 7%;
+  width: 42%;
+  height: 40%;
+  background: conic-gradient(from 334deg at 8% 88%, transparent 0 17deg, rgba(233, 169, 91, .018) 30deg, rgba(241, 177, 98, .042) 45deg, transparent 64deg);
+  opacity: .76;
+  transform: rotate(-.5deg);
+  transform-origin: 8% 88%;
+  animation: w-case-lamp-swing 12s ease-in-out infinite alternate;
+  will-change: transform, opacity;
+}
+
+.w-case-mote {
+  position: absolute;
+  display: block;
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: rgba(246, 203, 140, .7);
+  box-shadow: 0 0 8px rgba(235, 184, 113, .42);
+  opacity: .28;
+  transform: translate3d(0, 0, 0);
+  animation: w-case-mote-rise 8.5s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
+@keyframes w-case-arrive {
+  from { opacity: 0; transform: translate3d(0, 10px, 0); }
+  to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+@keyframes w-case-rain-fall {
+  0% { opacity: 0; transform: translate3d(0, -10vh, 0); }
+  18% { opacity: .2; }
+  100% { opacity: 0; transform: translate3d(4px, 34vh, 0); }
+}
+
+@keyframes w-case-mist-drift {
+  from { opacity: .12; transform: translate3d(-9px, 4px, 0) scale(.96); }
+  to { opacity: .3; transform: translate3d(13px, -7px, 0) scale(1.06); }
+}
+
+@keyframes w-case-lightning {
+  0%, 68%, 100% { opacity: 0; }
+  68.18% { opacity: .16; }
+  68.42% { opacity: .025; }
+  68.65% { opacity: .09; }
+  68.92% { opacity: 0; }
+}
+
+@keyframes w-case-thread-sway {
+  from { transform: rotate(-.16deg) translate3d(0, 0, 0); }
+  to { transform: rotate(.18deg) translate3d(0, -1px, 0); }
+}
+
+@keyframes w-case-lamp-breathe {
+  from { opacity: .29; }
+  to { opacity: .47; }
+}
+
+@keyframes w-case-lamp-swing {
+  from { opacity: .62; transform: rotate(-.7deg); }
+  to { opacity: .82; transform: rotate(.9deg); }
+}
+
+@keyframes w-case-mote-rise {
+  0%, 100% { opacity: .12; transform: translate3d(0, 0, 0); }
+  50% { opacity: .42; transform: translate3d(3px, -18px, 0); }
+}
+
+.w-case-static .w-case-entry {
+  animation: none;
+  opacity: 1;
+  transform: none;
+}
+
+.w-case-static .w-case-drop,
+.w-case-static .w-case-mist,
+.w-case-static .w-case-flash,
+.w-case-static .w-case-thread-drift,
+.w-case-static .w-case-lamp-wash,
+.w-case-static .w-case-lamp-cone,
+.w-case-static .w-case-mote {
+  animation: none;
+  transform: none;
+}
+
+.w-case-static .w-case-flash { opacity: 0; }
+
+@media (orientation: portrait) {
+  .w-case-rain { width: 28%; }
+  .w-case-window-sheen { width: 29%; }
+  .w-case-thread--desktop { display: none; }
+  .w-case-thread--portrait { display: block; }
+  .w-case-lamp-wash {
+    left: -24%;
+    bottom: 4%;
+    width: 78vw;
+    height: 27vh;
+  }
+  .w-case-lamp-cone {
+    left: -24%;
+    bottom: 9%;
+    width: 77%;
+    height: 30%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-case-static .w-case-drop,
+  .w-case-static .w-case-mist,
+  .w-case-static .w-case-flash,
+  .w-case-static .w-case-thread-drift,
+  .w-case-static .w-case-lamp-wash,
+  .w-case-static .w-case-lamp-cone,
+  .w-case-static .w-case-mote,
+  .w-case-static .w-case-entry {
+    animation: none !important;
+  }
+}

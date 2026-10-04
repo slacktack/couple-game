@@ -1,128 +1,354 @@
-import { useState } from 'react';
-import { ArrowRight, Check, Compass, Eye, EyeSlash, Heart, Lightbulb, LockKey, MoonStars, Radio, Sparkle, Star, Timer } from '@phosphor-icons/react';
-import { Button, GameFrame, HintBox } from '../components.jsx';
-import RouteBriefing from '../RouteBriefing.jsx';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { AnimatePresence, motion, useAnimate } from 'motion/react';
+import { CaretLeft, CaretRight, LockKeyOpen, PaperPlaneTilt, Sparkle } from '@phosphor-icons/react';
+import { AnswerLock, Button, Finale, GameRules, GameShell, HintLadder, HowItWorks, PrivatePanel, Round, RoundProgress } from '../kit/Kit.jsx';
+import { useClub, usePatch } from '../kit/club.js';
+import { burstFrom } from '../kit/celebrate.js';
+import './Observatory.css';
+
+const ANSWERS = ['566', 'ORBIT', '9', 'COMET', 'SPACE'];
+const SWITCH_KEYS = ['A', 'B', 'C', 'D', 'E'];
+const INITIAL = { step: 0, completed: [], hints: {}, finished: false, switches: { A: false, B: false, C: false, D: false, E: false }, bonus: {} };
+
+const CONSTELLATIONS = [
+  { name: 'ORION', line: '14 44 29 18 40 36 56 13 68 37 84 28', points: [[14, 44], [29, 18], [40, 36], [56, 13], [68, 37], [84, 28]] },
+  { name: 'LYRA', line: '18 30 39 48 56 19 79 36 56 19', points: [[18, 30], [39, 48], [56, 19], [79, 36]] },
+  { name: 'CYGNUS', line: '17 48 34 25 51 45 68 20 85 39', points: [[17, 48], [34, 25], [51, 45], [68, 20], [85, 39]] },
+  { name: 'DRACO', line: '12 23 31 40 49 25 65 48 83 28 92 53', points: [[12, 23], [31, 40], [49, 25], [65, 48], [83, 28], [92, 53]] },
+  { name: 'TAURUS', line: '16 20 38 41 58 24 78 47 38 41 35 62', points: [[16, 20], [38, 41], [58, 24], [78, 47], [35, 62]] },
+  { name: 'GEMINI', line: '27 15 31 35 35 55 68 15 64 35 60 55 31 35 64 35', points: [[27, 15], [31, 35], [35, 55], [68, 15], [64, 35], [60, 55]] },
+];
+const toPath = line => { const n = line.split(' ').map(Number); let d = ''; for (let i = 0; i < n.length; i += 2) d += `${i ? 'L' : 'M'}${n[i]} ${n[i + 1]} `; return d.trim(); };
 
 const LOCKS = [
-  { title: 'The constellation grid', label: 'LOCK 01', answer: '566', intro: 'Count names with one repeated letter. Enter their lengths in sky order.', cardA: 'A · Your star list: ORION · LYRA · CYGNUS', cardB: 'B · Your star list: DRACO · TAURUS · GEMINI', input: 'Three digits', hints: ['Look for the constellation name with one letter appearing twice.', 'The relevant names are ORION, TAURUS, and GEMINI. Count their letters.', 'Those counts, in that order, are 5 · 6 · 6.'] },
-  { title: 'Mirror transmission', label: 'LOCK 02', answer: 'ORBIT', accepted: ['LOCK IN THE ORBIT', 'ORBIT'], intro: 'Turn the reflected terminal phrase around. Restore its spaces.', cardA: 'A · Read this terminal slowly: T I B R O   E H T   N I   K C O L', cardB: 'B · The paper says: “The signal was reflected before it arrived.”', input: 'The hidden keyword', hints: ['Read the characters from right to left.', 'Reverse the letters, then put spaces back into the phrase.', 'It reads LOCK IN THE ORBIT. Keep ORBIT for the archive strip.'] },
-  { title: 'The five switches', label: 'LOCK 03', answer: '9', accepted: ['BCD', 'B C D', '9'], intro: 'Find the three ON switches. Their letter values make the code.', cardA: 'A · A is ON if and only if B is OFF. C is the opposite of A.', cardB: 'B · D matches B. E is the opposite of D. Exactly three switches are ON.', input: 'Tap the ON switches', hints: ['Start by choosing B as ON or OFF, then follow the clues.', 'If B is OFF, only A and E are ON. If B is ON, B, C, and D are ON.', 'B, C, and D are the three ON switches: 2 + 3 + 4 = 9.'] },
-  { title: 'The star-map cipher', label: 'LOCK 04', answer: 'COMET', intro: 'Shift LXVNC backward with the number from Lock 03.', cardA: 'A · The previous lock gave you a number. Keep it nearby.', cardB: 'B · Cipher fragment: LXVNC. Move backward through the alphabet.', input: 'Five letters', hints: ['Use the total from Lock 03 as the key.', 'Move each letter back 9 places, wrapping from A to Z when needed.', 'LXVNC becomes COMET. The source player sheet mentions a poem that was not included; the validated host route is this Caesar cipher.'] },
-  { title: 'The final vault', label: 'LOCK 05', answer: 'SPACE', accepted: ['SPACE'], intro: 'ORBIT and COMET share one final destination.', cardA: 'A · Your words so far: ORBIT and COMET.', cardB: 'B · Think of one place where both an orbit and a comet belong.', input: 'The final password', hints: ['They are both things you look for beyond Earth.', 'An orbit and a comet have one shared destination.', 'The final word is SPACE.'] },
+  {
+    label: 'Stars', owner: 'A', title: <>The constellation <em>grid</em></>,
+    intro: 'Six constellations on the chart. Three of them hold the archive code.',
+    note: <><p>Find the constellations whose names have <b>exactly one repeated letter</b>. Focus on repeated letters anywhere in the name, not just side by side.</p><p>Count the letters in each of those names, then read the counts in sky order: left to right, top row first. That’s a three-digit code.</p></>,
+    accept: ['566'], placeholder: 'Archive code',
+    hints: ['Only three names have a single letter that shows up twice.', 'Those names are ORION, TAURUS and GEMINI.', 'Count their letters in sky order: 5, 6, 6.'],
+    how: 'Tap a constellation to pin it and trace its lines. Talk it through, then type the code you agree on.',
+  },
+  {
+    label: 'Mirror', owner: 'B', title: <>Mirror <em>transmission</em></>,
+    intro: 'The receiver caught a reflected signal. A keyword is tucked inside it.',
+    note: <><p>A scrap of paper taped to the receiver says: <i>“The signal was reflected before it arrived.”</i></p><p>Turn the glass so it reads the right way, then put the spaces back. It’s a four-word phrase, and the keyword is its last word.</p></>,
+    accept: ['ORBIT', 'LOCK IN THE ORBIT'], placeholder: 'Keyword',
+    hints: ['Tap the glass to turn it over.', 'With spaces back it reads LOCK IN THE ORBIT.', 'The keyword is ORBIT.'],
+    how: 'Tap the glass slide to flip it over. Agree on the keyword, then type it.',
+  },
+  {
+    label: 'Switches', owner: 'A', title: <>The five <em>switches</em></>,
+    intro: 'The main bus is dark. Find the switches that bring it back.',
+    note: <><ul className="obs-rules"><li>A is ON only when B is OFF.</li><li>C is the opposite of A.</li><li>D matches B.</li><li>E is the opposite of D.</li><li>Exactly three switches are ON.</li></ul><p>The code is the ON switches’ letters, or their alphabet places added up (A = 1 … E = 5).</p></>,
+    accept: ['9', 'BCD'], placeholder: 'Switch code',
+    hints: ['Try B as ON first, then follow each rule in turn.', 'If B is OFF, only A and E come on. That’s two, not three.', 'B, C and D are on: 2 + 3 + 4 = 9.'],
+    how: 'Flip switches to test ideas. The panel shows what’s live; it never checks your logic.',
+  },
+  {
+    label: 'Cipher', owner: 'B', title: <>The star-map <em>cipher</em></>,
+    intro: 'A short transmission came through scrambled. The wheel can turn it back.',
+    note: <><p className="obs-cipher-text" aria-label="L X V N C">LXVNC</p><p>That’s the scrambled transmission. Move each letter backward through the alphabet by the code that opened Lock 03, wrapping from A round to Z.</p></>,
+    accept: ['COMET'], placeholder: 'Five letters',
+    hints: ['The key is the code from Lock 03.', 'Turn the wheel back 9, then read L, X, V, N and C on the outer ring.', 'LXVNC becomes COMET.'],
+    how: 'Drag the inner disc or use the arrows to set the shift. Tap a letter on the outer ring to light its partner on the disc.',
+  },
+  {
+    label: 'Vault', title: <>The final <em>vault</em></>,
+    intro: 'Two sky words, one destination. Send the archive there.',
+    a: 'Your words so far: ORBIT and COMET.', b: 'Think of one place where both an orbit and a comet belong.',
+    hints: ['Both live well beyond Earth.', 'Orbits and comets share one home, up past the sky.', 'The destination is SPACE.'],
+    how: 'You each hold half of the last clue. Share yours, then tap the destination you agree on.',
+  },
 ];
-const CONSTELLATIONS = [
-  { name: 'ORION', line: '14 44 29 18 40 36 56 13 68 37 84 28', points: [[14,44],[29,18],[40,36],[56,13],[68,37],[84,28]] },
-  { name: 'LYRA', line: '18 30 39 48 56 19 79 36 56 19', points: [[18,30],[39,48],[56,19],[79,36]] },
-  { name: 'CYGNUS', line: '17 48 34 25 51 45 68 20 85 39', points: [[17,48],[34,25],[51,45],[68,20],[85,39]] },
-  { name: 'DRACO', line: '12 23 31 40 49 25 65 48 83 28 92 53', points: [[12,23],[31,40],[49,25],[65,48],[83,28],[92,53]] },
-  { name: 'TAURUS', line: '16 20 38 41 58 24 78 47 38 41 35 62', points: [[16,20],[38,41],[58,24],[78,47],[35,62]] },
-  { name: 'GEMINI', line: '27 15 31 35 35 55 68 15 64 35 60 55 31 35 64 35', points: [[27,15],[31,35],[35,55],[68,15],[64,35],[60,55]] },
-];
-const BRIEFING_STOPS = [
-  { title: 'Constellations', short: 'Count the stars', preview: 'Find the repeated letters and pin their counts to the archive strip.', icon: <Star size={17} />, position: [50, 10] },
-  { title: 'Mirror signal', short: 'Reverse a message', preview: 'Turn a reflected transmission around to recover its hidden word.', icon: <MoonStars size={17} />, position: [86, 31] },
-  { title: 'Five switches', short: 'Trace the circuit', preview: 'Follow the ON and OFF links until the station’s panel lights up.', icon: <Sparkle size={17} />, position: [73, 80] },
-  { title: 'Star map', short: 'Decode the sky', preview: 'Use the switch total as a key and move backward through the alphabet.', icon: <Compass size={17} />, position: [30, 70] },
-  { title: 'Final vault', short: 'Open the archive', preview: 'Bring your two sky words to the place they both belong.', icon: <LockKey size={17} />, position: [51, 52] },
-];
-const INITIAL = { started: false, introRole: 'A', step: 0, role: 'A', cardOpen: false, answer: '', switches: { A: false, B: false, C: false, D: false, E: false }, answers: [], hints: {}, completed: [], finished: false, archiveOpen: false, sideQuest: { role: 'A', notes: { A: '', B: '' }, revealed: false } };
-const normalized = value => (value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
-function decodeShift(value, shift) { return value.replace(/[A-Z]/g, letter => String.fromCharCode(((letter.charCodeAt(0) - 65 - shift + 26) % 26) + 65)); }
-function SourceRoutes({ onPlayerRoute, onLibrary, onRules }) { return <div className="route-shortcuts"><button onClick={() => onPlayerRoute('/his')}>His clues · A</button><button onClick={() => onPlayerRoute('/hers')}>Her clues · B</button>{onRules && <button onClick={onRules}>How to play</button>}<button onClick={onLibrary}>Source pages</button></div>; }
 
-export default function Observatory({ data, update, onBack, onLibrary, onPlayerRoute, theme, onToggleTheme }) {
-  const state = { ...INITIAL, ...(data || {}) };
-  const [ending, setEnding] = useState(false);
-  const [selectedStar, setSelectedStar] = useState('ORION');
-  const [pinnedStars, setPinnedStars] = useState([]);
-  const [signalFlipped, setSignalFlipped] = useState(false);
-  const [cipherShift, setCipherShift] = useState(0);
-  const lockIndex = Math.min(state.step || 0, 4);
-  const lock = LOCKS[lockIndex];
-  const patch = patcher => update(previous => { const old = { ...INITIAL, ...(previous || {}) }; return typeof patcher === 'function' ? patcher(old) : { ...old, ...patcher }; });
-  const success = (lock.accepted || [lock.answer]).map(normalized).includes(normalized(state.answer));
-  const switches = state.switches || INITIAL.switches;
-  const flipSwitch = letter => patch(old => {
-    const next = { ...INITIAL.switches, ...(old.switches || {}), [letter]: !old.switches?.[letter] };
-    const active = Object.keys(next).filter(key => next[key]);
-    return { ...old, switches: next, answer: active.length === 3 ? String(active.reduce((sum, key) => sum + key.charCodeAt(0) - 64, 0)) : '' };
-  });
-  const pinConstellation = name => setPinnedStars(current => current.includes(name)
-    ? current.filter(item => item !== name)
-    : current.length < 3 ? [...current, name] : current);
-  const starCode = ['ORION', 'TAURUS', 'GEMINI'].every(name => pinnedStars.includes(name)) && pinnedStars.length === 3
-    ? CONSTELLATIONS.filter(group => pinnedStars.includes(group.name)).map(group => group.name.length).join('')
-    : '';
-  const orderedPinnedStars = CONSTELLATIONS.filter(group => pinnedStars.includes(group.name));
-  const activeCipherShift = cipherShift || Number(state.answers?.[2]) || 9;
-  const decodedSignal = decodeShift('LXVNC', activeCipherShift);
-  const solve = answer => {
-    const answers = [...(state.answers || [])];
-    answers[lockIndex] = lock.answer;
-    const completed = [...new Set([...(state.completed || []), lockIndex])];
-    if (lockIndex === 4) { patch({ answers, completed, finished: true }); setEnding(true); }
-    else patch({ answers, completed, step: lockIndex + 1, answer: '', cardOpen: false });
+// Stable elements: PrivatePanel re-hides whenever its a/b identity changes.
+const NOTES = LOCKS.map(l => l.note ? <div className="obs-note">{l.note}</div> : { a: <div className="obs-note"><p>{l.a}</p></div>, b: <div className="obs-note"><p>{l.b}</p></div> });
+
+const RULES = [
+  { title: 'Five locks, in order', text: 'Each lock opens the next. The answers you earn add up to the archive at the end.' },
+  { title: 'One of you navigates', text: 'Tushar holds the notes for Locks 01 and 03, Riya for 02 and 04. The navigator reads their note aloud; the other solves out loud with them. Lock 05 is split between you.' },
+  { title: 'Play with the room', text: 'The star chart, mirror glass, switchboard and cipher wheel all move. Poke at them while you talk.' },
+  { title: 'Stuck is fine', text: 'Hints open one at a time. After the last one you can reveal the answer and keep going.' },
+];
+
+const seeded = (count, seed) => { let s = seed; const r = () => (s = (s * 9301 + 49297) % 233280) / 233280; return Array.from({ length: count }, (_, i) => ({ i, x: r() * 100, y: r() * 100, s: .6 + r() * 1.8, d: r() * 4 }));
+};
+const SKY = seeded(46, 7);
+
+function useNarrow(query = '(max-width: 560px)') {
+  const [narrow, setNarrow] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => { const m = window.matchMedia(query); const on = () => setNarrow(m.matches); m.addEventListener('change', on); return () => m.removeEventListener('change', on); }, [query]);
+  return narrow;
+}
+
+function Sky() {
+  return <div className="obs-sky" aria-hidden="true">{SKY.map(star => <i key={star.i} style={{ left: `${star.x}%`, top: `${star.y}%`, width: star.s, height: star.s, animationDelay: `${star.d}s` }} />)}</div>;
+}
+
+function Unlocked({ lock }) {
+  return <motion.div className="obs-unlocked" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+    <motion.span className="obs-unlocked-seal" initial={{ scale: 2.4, rotate: -30, opacity: 0 }} animate={{ scale: 1, rotate: -8, opacity: 1 }} transition={{ type: 'spring', stiffness: 320, damping: 14 }}>
+      <LockKeyOpen size={30} weight="duotone" /><b>Lock 0{lock + 1} open</b><span>{ANSWERS[lock]}</span>
+    </motion.span>
+  </motion.div>;
+}
+
+function StarChart() {
+  const narrow = useNarrow();
+  const [lit, setLit] = useState(null);
+  const [pinned, setPinned] = useState([]);
+  const cols = narrow ? 2 : 3;
+  const cellW = 110, cellH = narrow ? 104 : 100;
+  const toggle = name => setPinned(p => p.includes(name) ? p.filter(n => n !== name) : [...p, name]);
+  return <div className="obs-chart">
+    <svg viewBox={`0 0 ${cols * cellW} ${Math.ceil(6 / cols) * cellH}`} role="group" aria-label="Star chart with six constellations">
+      {CONSTELLATIONS.map((c, index) => {
+        const x = (index % cols) * cellW + 5, y = Math.floor(index / cols) * cellH + 6;
+        const on = lit === c.name || pinned.includes(c.name);
+        const isPinned = pinned.includes(c.name);
+        return <g key={c.name} transform={`translate(${x} ${y})`} className={`obs-const ${on ? 'is-lit' : ''} ${isPinned ? 'is-pinned' : ''}`}
+          role="button" tabIndex={0} aria-pressed={isPinned} aria-label={c.name}
+          onPointerEnter={() => setLit(c.name)} onPointerLeave={() => setLit(l => l === c.name ? null : l)}
+          onFocus={() => setLit(c.name)} onBlur={() => setLit(null)}
+          onClick={() => toggle(c.name)} onKeyDown={e => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), toggle(c.name))}>
+          <rect className="obs-const-hit" x="-4" y="-4" width="108" height={cellH - 4} rx="14" />
+          <path className="obs-const-ghost" d={toPath(c.line)} />
+          <motion.path className="obs-const-line" d={toPath(c.line)} initial={false} animate={{ pathLength: on ? 1 : 0, opacity: on ? 1 : 0 }} transition={{ duration: on ? .9 : .35, ease: [.22, 1, .36, 1] }} />
+          {c.points.map(([cx, cy], i) => <motion.circle key={i} cx={cx} cy={cy} r={i === 0 ? 2.8 : 2.1} className="obs-const-star" style={{ animationDelay: `${(index + i) * .37}s` }}
+            animate={{ scale: on ? 1.35 : 1 }} transition={{ type: 'spring', stiffness: 500, damping: 12, delay: on ? i * .06 : 0 }} />)}
+          <text className="obs-const-num" x="2" y="80">0{index + 1}</text>
+          <text className="obs-const-name" x="18" y="80">{c.name}</text>
+          <AnimatePresence>{isPinned && <motion.g initial={{ scale: 0, y: -10 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0 }} transition={{ type: 'spring', stiffness: 600, damping: 14 }}>
+            <path className="obs-pin" d="M94 4 l2.4 5 5.4.6-4 3.7 1.1 5.3-4.9-2.7-4.9 2.7 1.1-5.3-4-3.7 5.4-.6z" />
+          </motion.g>}</AnimatePresence>
+        </g>;
+      })}
+    </svg>
+  </div>;
+}
+
+function MirrorReceiver() {
+  const [flipped, setFlipped] = useState(false);
+  const letters = 'LOCKINTHEORBIT'.split('');
+  return <div className="obs-receiver">
+    <svg className="obs-orbit" viewBox="0 0 120 120" aria-hidden="true">
+      <circle cx="60" cy="60" r="16" className="obs-orbit-planet" />
+      <ellipse cx="60" cy="60" rx="50" ry="20" className="obs-orbit-ring" transform="rotate(-18 60 60)" />
+      <ellipse cx="60" cy="60" rx="36" ry="52" className="obs-orbit-ring is-faint" transform="rotate(30 60 60)" />
+      <g className="obs-orbit-spin"><circle cx="60" cy="8" r="3.2" className="obs-orbit-comet" /><path d="M60 8 Q44 6 34 12" className="obs-orbit-tail" /></g>
+    </svg>
+    <span className="micro obs-receiver-label">Incoming · reflected</span>
+    <div className="obs-glass-stage">
+      <motion.button type="button" className="obs-glass" onClick={() => setFlipped(f => !f)} aria-label={flipped ? 'Turn the glass back' : 'Turn the glass over'}
+        animate={{ rotateY: flipped ? 180 : 0 }} whileTap={{ scale: .96 }} transition={{ type: 'spring', stiffness: 140, damping: 13 }}>
+        <span className="obs-glass-face is-front"><span className="obs-mirrored">{letters.map((l, i) => <span key={i} style={{ animationDelay: `${i * .12}s` }}>{l}</span>)}</span></span>
+        <span className="obs-glass-face is-back"><span>{letters.map((l, i) => <span key={i} style={{ animationDelay: `${i * .12}s` }}>{l}</span>)}</span></span>
+      </motion.button>
+    </div>
+  </div>;
+}
+
+function Switchboard({ switches, onFlip }) {
+  const live = SWITCH_KEYS.filter(k => switches[k]);
+  return <div className={`obs-panel ${live.length === 3 ? 'is-closed' : ''}`}>
+    <div className="obs-panel-head">
+      <span className="micro">Main bus</span>
+      <span className="obs-readout" aria-live="polite">{live.length ? live.map(k => <motion.b key={k} initial={{ y: -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }}>{k}</motion.b>) : <i>all dark</i>}</span>
+    </div>
+    <div className="obs-bus" aria-hidden="true"><motion.span className="obs-bus-fill" animate={{ scaleX: live.length / 5 }} transition={{ type: 'spring', stiffness: 160, damping: 16 }} /></div>
+    <div className="obs-switches">
+      {SWITCH_KEYS.map(k => {
+        const on = !!switches[k];
+        return <button type="button" key={k} className={`obs-switch ${on ? 'is-on' : ''}`} aria-pressed={on} aria-label={`Switch ${k}`} onClick={() => onFlip(k)}>
+          <span className="obs-wire" />
+          <motion.span className="obs-lamp" animate={{ scale: on ? [1, 1.35, 1] : 1 }} transition={{ duration: .4 }} />
+          <span className="obs-slot"><motion.span className="obs-lever" animate={{ rotate: on ? -32 : 32 }} transition={{ type: 'spring', stiffness: 520, damping: 13 }}><i /></motion.span></span>
+          <b>{k}</b>
+        </button>;
+      })}
+    </div>
+  </div>;
+}
+
+const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+const STEP = 360 / 26;
+const mod26 = n => ((n % 26) + 26) % 26;
+const polar = (r, i) => { const a = (i * STEP - 90) * Math.PI / 180; return [r * Math.cos(a), r * Math.sin(a)]; };
+
+function CipherWheel() {
+  const [turn, setTurn] = useState(0);
+  const [picked, setPicked] = useState(null);
+  const svgRef = useRef(null);
+  const drag = useRef(null);
+  const shift = mod26(turn);
+  const angleAt = e => { const b = svgRef.current.getBoundingClientRect(); return Math.atan2(e.clientY - (b.top + b.height / 2), e.clientX - (b.left + b.width / 2)) * 180 / Math.PI; };
+  const down = e => { e.currentTarget.setPointerCapture(e.pointerId); drag.current = { last: angleAt(e), acc: 0, start: turn }; };
+  const move = e => {
+    if (!drag.current) return;
+    const a = angleAt(e); let d = a - drag.current.last; if (d > 180) d -= 360; if (d < -180) d += 360;
+    drag.current.last = a; drag.current.acc += d;
+    setTurn(drag.current.start + Math.round(drag.current.acc / STEP));
   };
-  const showSolution = () => solve(lock.answer);
-  const reset = () => { patch(INITIAL); setEnding(false); };
-  const side = { ...INITIAL.sideQuest, ...(state.sideQuest || {}) };
-  const changeSideNote = (role, value) => patch(old => ({ sideQuest: { ...old.sideQuest, notes: { ...old.sideQuest.notes, [role]: value } } }));
-  if (state.finished || ending) return <GameFrame title="The Observatory Lock" eyebrow="Game 03 · a two-person digital escape room" subtitle="The archive is open. The star map is all yours." icon={<span className="observatory-emblem"><MoonStars size={32} weight="duotone" /></span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="blue" aside={<SourceRoutes onPlayerRoute={onPlayerRoute} onLibrary={onLibrary} />}>
-    <section className="observatory-ending"><span className="star-map-glow"><Star size={34} weight="fill" /></span><span className="micro-label">The archive opens at 23:59</span><h2>You unlocked the <em>star map.</em></h2><p>You found ORBIT, decoded COMET, and sent them both to the same place. The constellation room is yours to keep.</p><div className="archive-strip"><span>566</span><span>ORBIT</span><span>9</span><span>COMET</span><span>SPACE</span></div><button className="archive-toggle" onClick={() => patch({ archiveOpen: !state.archiveOpen })}>{state.archiveOpen ? 'Hide the route' : 'Read your solved archive strip'} <ArrowRight size={14} /></button>{state.archiveOpen && <p className="archive-spoken">Lock 01 → 566 · Lock 02 → ORBIT · Lock 03 → 9 · Lock 04 → COMET · Lock 05 → SPACE</p>}<Button kind="soft" onClick={reset}>Play the locks again</Button></section>
-  </GameFrame>;
-  if (!state.started) return <GameFrame title="The Observatory Lock" eyebrow="Game 03 · a two-person digital escape room" subtitle="Five small locks, private navigator notes, and a patient archive." icon={<span className="observatory-emblem"><MoonStars size={32} weight="duotone" /></span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="blue">
-    <RouteBriefing variant="orbit" nodes={BRIEFING_STOPS} tagline="Five locks. One shared orbit."
-      number="GAME 03"
-      name="The Observatory Lock"
-      subtitle="A cozy, shared escape room in an old star observatory."
-      time="35–60 minutes"
-      objective="Open five locks, collect the archive answers, and reveal what the observatory has been protecting. One person has the clue for each lock; the last lock is solved together."
-      whatYouNeed="This page, a place to write five answers, and a calculator only if you like. The clock is just atmosphere."
-      selectedRole={state.introRole || 'A'}
-      audioSrc="/audio/rules/observatory.mp3"
-      onSelectRole={role => patch({ introRole: role })}
-      roles={{
-        A: { name: 'Him · Player A', summary: 'His Navigator notes cover locks 01 and 03.' },
-        B: { name: 'Her · Player B', summary: 'Her notes cover locks 02 and 04; lock 05 is shared.' },
-      }}
-      steps={[
-        { title: 'Choose who reads the first Navigator note.', text: 'His route has the notes for Locks 01 and 03. Her route has Locks 02 and 04. Share each clue out loud in your own words.' },
-        { title: 'Solve the five locks in order.', text: 'Enter one answer at each lock. The site keeps your Archive Strip and opens the next lock when you continue.' },
-        { title: 'Trade Navigator and Solver.', text: 'The player whose private note belongs to the current lock reads it and guides the other person. Switch roles on the next lock.' },
-        { title: 'Use the hint ladder or show the answer.', text: 'Each lock has three small hints and a rescue button. Take the answer and move on as soon as the puzzle stops feeling fun.' },
-      ]}
-      rulebook={[
-        { title: 'The story', text: 'At 23:59, an old observatory locks itself. Work through five small puzzles together and keep each answer on the Archive Strip. There is no fail state and the clock never runs out.' },
-        { title: 'Your private Navigator notes', text: 'Player A has the clue notes for Locks 01 and 03. Player B has the notes for Locks 02 and 04. Open your own route, read your note, and paraphrase it to your partner. Do not hand over your page.' },
-        { title: 'How a lock works', text: 'The current lock tells you what to do and where the pieces of information are. The Navigator shares their private note; both players discuss and agree on one answer; enter it to open the next lock.' },
-        { title: 'The five puzzles', text: 'Lock 01 counts letters in selected constellation names. Lock 02 reverses a reflected message. Lock 03 uses simple ON/OFF relationships. Lock 04 decodes a short Caesar cipher using a number from Lock 03. Lock 05 asks what two sky objects have in common.' },
-        { title: 'A source-page gap, already resolved', text: 'The original player PDF refers to a poem for Lock 04, but that poem is missing from the provided files. The host guide supplies the complete route used here: shift LXVNC backward by the Lock 03 number. You can use the hints; no missing page is needed.' },
-        { title: 'Hints, breaks, and side quest', text: 'Open hints one at a time. The rescue button records the answer and moves on. The Signal from Home photo prompt is optional and can be skipped.' },
-      ]}
-      onStart={role => patch({ started: true, introRole: role, role })}
-      onReadRulebook={onLibrary}
-      onReadPlayerRoute={role => onPlayerRoute(role === 'A' ? '/his' : '/hers')}
-    />
-  </GameFrame>;
-  return <GameFrame title="The Observatory Lock" eyebrow="Game 03 · a two-person digital escape room" subtitle="Five small locks. A rescue hint on every one. The archive is patient." icon={<span className="observatory-emblem"><MoonStars size={32} weight="duotone" /></span>} onBack={onBack} theme={theme} onToggleTheme={onToggleTheme} color="blue" playMode aside={<SourceRoutes onPlayerRoute={onPlayerRoute} onLibrary={onLibrary} onRules={() => patch({ started: false })} />}>
-    <section className="observatory-brief"><div><span className="micro-label">Midnight signal · 5 locks</span><h2>Open the midnight archive.</h2><p>Trade private notes. Solve each lock together.</p></div><div className="obs-moon" aria-hidden="true"><MoonStars size={38} weight="duotone" /></div></section>
-    <div className="lock-progress">{LOCKS.map((entry, index) => <div className={`lock-progress-stop ${index === lockIndex ? 'current' : ''} ${state.completed.includes(index) ? 'solved' : ''}`} key={entry.label}><span>{state.completed.includes(index) ? <Check size={14} /> : String(index + 1).padStart(2, '0')}</span><b>{entry.label}</b>{index < 4 && <i />}</div>)}</div>
-    <section className="obs-lock-card"><div className="obs-lock-heading"><div><span className="micro-label">{lock.label} · your current puzzle</span><h2>{lock.title}</h2><p>{lock.intro}</p></div><span className="obs-lock-star"><Star size={23} /></span></div>{lockIndex === 0 && <>
-        <div className="constellation-board" aria-label="Interactive constellation chart">{CONSTELLATIONS.map((group, index) => <button type="button" key={group.name} className={`constellation-card ${selectedStar === group.name ? 'is-lit' : ''} ${pinnedStars.includes(group.name) ? 'is-pinned' : ''}`} aria-pressed={pinnedStars.includes(group.name)} onMouseEnter={() => setSelectedStar(group.name)} onFocus={() => setSelectedStar(group.name)} onClick={() => pinConstellation(group.name)}><svg viewBox="0 0 100 68" aria-hidden="true"><path d={`M${group.line.replaceAll(' ', ',')}`} />{group.points.map(([cx, cy], i) => <circle key={i} cx={cx} cy={cy} r={i === 0 ? 2.6 : 2} />)}</svg><span>{group.name}</span><i>{String(index + 1).padStart(2, '0')}</i>{pinnedStars.includes(group.name) && <b className="constellation-length">{group.name.length}</b>}</button>)}</div>
-      <div className="star-code-strip"><span>PIN THREE NAMES</span><div>{orderedPinnedStars.map(group => <b key={group.name}>{group.name.length}</b>)}{Array.from({ length: Math.max(0, 3 - pinnedStars.length) }, (_, i) => <i key={i}>·</i>)}</div><small>{pinnedStars.length}/3 pinned · sky order</small></div>
-      </>}
-      {lockIndex === 1 && <div className={`mirror-chamber ${signalFlipped ? 'is-flipped' : ''}`}><div className="mirror-orbit" aria-hidden="true"><Radio size={26} weight="duotone" /><i /><i /></div><div className="mirror-signal"><span className="micro-label">REFLECTED TERMINAL · INCOMING</span><strong>LOCKINTHEORBIT</strong><small>{signalFlipped ? 'Strip turned. Put the spaces back where they belong.' : 'The receiver has mirrored the character strip.'}</small></div><button type="button" onClick={() => setSignalFlipped(value => !value)}>{signalFlipped ? 'Mirror it again' : 'Turn the signal over'} <ArrowRight size={15} /></button></div>}
-      <div className="navigator-strip"><span>Navigator</span><button className={state.role === 'A' ? 'active' : ''} onClick={() => patch({ role: 'A', cardOpen: false })}>A · {state.role === 'A' ? 'reads' : 'solves'}</button><button className={state.role === 'B' ? 'active' : ''} onClick={() => patch({ role: 'B', cardOpen: false })}>B · {state.role === 'B' ? 'reads' : 'solves'}</button></div>
-      <div className="obs-private-card"><div><div><span className="input-caption">Player {state.role}’s private note</span></div><button onClick={() => patch({ cardOpen: !state.cardOpen })} aria-label={state.cardOpen ? 'Hide private clue' : 'Reveal private clue'}>{state.cardOpen ? <EyeSlash size={16} /> : <Eye size={16} />}{state.cardOpen ? 'Hide note' : 'Reveal note'}</button></div>{state.cardOpen && <p className="obs-private-text">{state.role === 'A' ? lock.cardA : state.role === 'B' ? lock.cardB : 'Both players read the shared final clue.'}</p>}</div>
-      {lockIndex === 2 && <div className="switchboard" aria-label="Interactive five switch circuit"><div className="switchboard-art"><span className="switchboard-label">OBSERVATORY · MAIN BUS</span><div className="switch-track" aria-hidden="true"><i className={Object.values(switches).filter(Boolean).length === 3 ? 'powered' : ''} /></div><div className="switches">{Object.entries(switches).map(([letter, on]) => <button key={letter} type="button" aria-pressed={on} className={on ? 'is-on' : ''} onClick={() => flipSwitch(letter)}><span className="switch-toggle"><i /></span><b>{letter}</b><small>{on ? 'ON' : 'OFF'}</small></button>)}</div></div><div className="switch-readout"><span>LIVE CIRCUIT</span><b>{Object.entries(switches).filter(([, on]) => on).map(([letter]) => letter).join(' · ') || '—'}</b><small>{Object.values(switches).filter(Boolean).length === 3 ? `VALUE TOTAL · ${state.answer || '0'}` : 'Set exactly three switches to ON'}</small></div></div>}
-      {lockIndex === 3 && <div className="cipher-wheel"><div className="cipher-wheel-title"><span className="micro-label">STAR CHART · CAESAR SHIFT</span><span>BACK <b>{activeCipherShift}</b></span></div><div className="cipher-letter-path"><div><small>TRANSMITTED</small><span>{'LXVNC'.split('').map((letter, index) => <b key={index}>{letter}</b>)}</span></div><ArrowRight size={19} /><div><small>SHIFTED BACK</small><span className="cipher-result">{decodedSignal.split('').map((letter, index) => <b key={index}>{letter}</b>)}</span></div></div><label className="cipher-slider"><span>Rotate the cipher wheel</span><input type="range" min="1" max="13" value={activeCipherShift} onChange={event => setCipherShift(Number(event.target.value))} aria-label="Cipher shift"/><b>{activeCipherShift} places</b></label></div>}
-      {lockIndex === 4 && <div className="vault-destinations" aria-label="Choose the shared destination"><span>WHERE THE SKY OBJECTS MEET</span>{['SPACE', 'OCEAN', 'EARTH'].map(place => <button key={place} className={state.answer === place ? 'is-selected' : ''} onClick={() => patch({ answer: place })}><span>{place === 'SPACE' ? '✦' : place === 'OCEAN' ? '≈' : '◉'}</span>{place}</button>)}</div>}
-      <div className="obs-answer-entry">{lockIndex === 0 ? <div className="answer-key-display"><span>ARCHIVE CODE</span><div>{(starCode || '').split('').map((digit, i) => <b key={i}>{digit}</b>)}{Array.from({ length: Math.max(0, 3 - (starCode || '').length) }, (_, i) => <i key={i}>·</i>)}</div></div> : lockIndex !== 2 && lockIndex !== 4 ? <label><span>Your shared answer</span><input value={state.answer || ''} onChange={e => patch({ answer: e.target.value })} placeholder={lock.input} onKeyDown={e => { if (e.key === 'Enter' && success) solve(state.answer); }} /></label> : <div className="answer-key-display"><span>{lockIndex === 2 ? 'SWITCH CODE' : 'VAULT KEY'}</span><div><b>{state.answer || '·'}</b></div></div>}<Button kind="berry" onClick={() => solve(lockIndex === 0 ? starCode : state.answer)} disabled={lockIndex === 0 ? !starCode : !success}>Open the lock <ArrowRight size={16} /></Button>{state.answer && lockIndex !== 0 && <span className={`answer-feedback ${success ? 'answer-correct' : ''}`}>{success ? 'Click to save that key and move on.' : 'Not quite yet. No penalty, and hints are right here.'}</span>}</div>
-      {lockIndex === 3 && <div className="observatory-fix"><Lightbulb size={17} /><p>Source poem missing · using the confirmed 9-step cipher: <b>LXVNC → COMET</b>.</p></div>}
-      <HintBox hints={lock.hints} index={state.hints?.[lockIndex] || 0} onReveal={() => patch(old => ({ hints: { ...old.hints, [lockIndex]: Math.min(3, (old.hints?.[lockIndex] || 0) + 1) } }))} recovery onRecovery={showSolution} recoveryLabel="Show the answer & move on" />
-    </section>
-    <div className="observatory-footer-progress"><span>Archive Strip · {state.completed.length}/5 locks open</span><span><Heart size={15} /> The observatory has no fail state.</span></div>
-    <details className="signal-quest"><summary><span><Sparkle size={17} /> Optional side quest · Signal from home</span><span>90 seconds each</span></summary><div className="signal-inner"><p>Pick a photo from your camera roll that feels like an observatory archive. Do not explain it yet. Describe the story your partner guessed, or save a few words from your own reveal.</p><div className="role-tabs"><button className={side.role === 'A' ? 'selected' : ''} onClick={() => patch(old => ({ sideQuest: { ...old.sideQuest, role: 'A', revealed: false } }))}>Player A</button><button className={side.role === 'B' ? 'selected' : ''} onClick={() => patch(old => ({ sideQuest: { ...old.sideQuest, role: 'B', revealed: false } }))}>Player B</button></div><textarea value={side.notes?.[side.role] || ''} onChange={e => changeSideNote(side.role, e.target.value)} placeholder="A tiny clue or photo caption…"/><div className="signal-actions"><span>{Object.values(side.notes || {}).filter(Boolean).length}/2 notes ready · reveal together</span><Button kind={side.revealed ? 'soft' : 'quiet'} disabled={!side.notes?.A || !side.notes?.B} onClick={() => patch(old => ({ sideQuest: { ...old.sideQuest, revealed: !old.sideQuest.revealed } }))}>{side.revealed ? 'Hide the reveal' : 'Reveal together'} <ArrowRight size={15} /></Button></div>{side.revealed && <div className="signal-reveal"><span><b>Player A</b>{side.notes.A}</span><span><b>Player B</b>{side.notes.B}</span></div>}</div></details>
-    <p className="save-note"><Check size={14} /> Your current lock saves in this browser. The side quest stays optional.</p>
-  </GameFrame>;
+  const up = () => { drag.current = null; };
+  const pickAt = e => { const b = svgRef.current.getBoundingClientRect(); const a = Math.atan2(e.clientY - (b.top + b.height / 2), e.clientX - (b.left + b.width / 2)) * 180 / Math.PI + 90; setPicked(p => { const i = mod26(Math.round(a / STEP)); return p === i ? null : i; }); };
+  const pairInner = picked === null ? null : mod26(picked - shift);
+  return <div className="obs-wheel">
+    <svg ref={svgRef} viewBox="-150 -150 300 300" className="obs-wheel-svg" role="img" aria-label={`Cipher wheel turned back ${shift}`}>
+      <circle r="148" className="obs-wheel-rim" />
+      <path className="obs-wheel-hit" d="M0-146A146 146 0 1 1 0 146A146 146 0 1 1 0-146M0-112A112 112 0 1 0 0 112A112 112 0 1 0 0-112Z" onClick={pickAt} />
+      {ALPHA.map((l, i) => { const [x, y] = polar(129, i); return <text key={l} x={x} y={y} transform={`rotate(${i * STEP} ${x} ${y})`} className={`obs-wheel-out ${picked === i ? 'is-picked' : ''}`}>{l}</text>; })}
+      <AnimatePresence>{picked !== null && <motion.line key={picked} x1={polar(46, picked)[0]} y1={polar(46, picked)[1]} x2={polar(142, picked)[0]} y2={polar(142, picked)[1]} className="obs-wheel-beam" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} exit={{ opacity: 0 }} />}</AnimatePresence>
+      <motion.g className="obs-wheel-disc" animate={{ rotate: turn * STEP }} transition={{ type: 'spring', stiffness: 210, damping: 18 }}
+        onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>
+        <circle r="110" className="obs-wheel-plate" />
+        {ALPHA.map((l, i) => { const [x, y] = polar(94, i); const [tx, ty] = polar(108, i); return <g key={l}>
+          <line x1={polar(76, i)[0]} y1={polar(76, i)[1]} x2={tx} y2={ty} className="obs-wheel-tick" />
+          <text x={x} y={y} transform={`rotate(${i * STEP} ${x} ${y})`} className={`obs-wheel-in ${pairInner === i ? 'is-picked' : ''}`}>{l}</text>
+        </g>; })}
+        <circle r="70" className="obs-wheel-inner" />
+        {[0, 1, 2, 3, 4, 5].map(i => <path key={i} className="obs-wheel-star" transform={`rotate(${i * 60}) translate(0 -52)`} d="M0-5 1.4-1.4 5 0 1.4 1.4 0 5-1.4 1.4-5 0-1.4-1.4z" />)}
+      </motion.g>
+      <g className="obs-wheel-hub" pointerEvents="none">
+        <circle r="36" />
+        <text y="-8" className="obs-wheel-hub-label">BACK</text>
+        <AnimatePresence initial={false}><motion.text key={shift} y="17" className="obs-wheel-hub-num" initial={{ y: 14, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: -12, opacity: 0 }} transition={{ type: 'spring', stiffness: 500, damping: 26 }}>{shift}</motion.text></AnimatePresence>
+      </g>
+    </svg>
+    <div className="obs-wheel-turn">
+      <motion.button type="button" className="obs-turn" whileTap={{ scale: .85, rotate: -20 }} onClick={() => setTurn(t => t - 1)} aria-label="Turn back one fewer"><CaretLeft size={20} weight="bold" /></motion.button>
+      <span className="micro">Turn the disc</span>
+      <motion.button type="button" className="obs-turn" whileTap={{ scale: .85, rotate: 20 }} onClick={() => setTurn(t => t + 1)} aria-label="Turn back one more"><CaretRight size={20} weight="bold" /></motion.button>
+    </div>
+  </div>;
+}
+
+const DESTINATIONS = [
+  { id: 'OCEAN', art: <><circle cx="40" cy="40" r="30" className="obs-dest-orb" /><path d="M12 44q7-6 14 0t14 0 14 0 14 0M14 54q7-6 13 0t13 0 13 0 13 0" className="obs-dest-wave" /></> },
+  { id: 'SPACE', art: <><circle cx="40" cy="40" r="15" className="obs-dest-orb" /><ellipse cx="40" cy="40" rx="31" ry="10" transform="rotate(-20 40 40)" className="obs-dest-ring" /><g className="obs-dest-spin"><circle cx="40" cy="9" r="2.6" className="obs-dest-comet" /></g></> },
+  { id: 'EARTH', art: <><circle cx="40" cy="40" r="28" className="obs-dest-orb" /><path d="M22 30q8-6 14 2t12-2 10 8-6 10-12 4-8 6-10-8z" className="obs-dest-land" /></> },
+];
+
+function Destination({ dest, tried, onPick }) {
+  const [scope, animate] = useAnimate();
+  const pick = () => { if (!onPick(dest.id)) animate(scope.current, { x: [0, -12, 11, -7, 5, 0], rotate: [0, -5, 4, -2, 1, 0] }, { duration: .55 }); };
+  return <motion.button ref={scope} type="button" className={`obs-dest ${tried ? 'is-tried' : ''}`} onClick={pick} whileHover={{ y: -4 }} whileTap={{ scale: .93 }}>
+    <svg viewBox="0 0 80 80" aria-hidden="true">{dest.art}</svg><b>{dest.id}</b>
+  </motion.button>;
+}
+
+function Vault({ onSolve }) {
+  const [tried, setTried] = useState([]);
+  const ref = useRef(null);
+  const pick = id => {
+    if (id === 'SPACE') { burstFrom(ref.current, { shape: 'star' }); onSolve(); return true; }
+    setTried(t => [...new Set([...t, id])]);
+    return false;
+  };
+  return <div className="obs-vault" ref={ref}>
+    <span className="micro">Send the archive to</span>
+    <div className="obs-dests">{DESTINATIONS.map(d => <Destination key={d.id} dest={d} tried={tried.includes(d.id)} onPick={pick} />)}</div>
+  </div>;
+}
+
+const MAP_STARS = [[40, 150], [96, 92], [168, 118], [230, 62], [290, 104]];
+const BONUS_STARS = { A: [70, 46], B: [262, 160] };
+
+function StarMap({ bonus }) {
+  return <div className="obs-map">
+    <Sky />
+    <div className="obs-map-clock" aria-label="23:59"><span>23</span><i>:</i><span>59</span></div>
+    <svg viewBox="0 0 330 200" role="img" aria-label="Your archive: 566, ORBIT, 9, COMET, SPACE">
+      {MAP_STARS.slice(1).map(([x, y], i) => <motion.line key={i} x1={MAP_STARS[i][0]} y1={MAP_STARS[i][1]} x2={x} y2={y} className="obs-map-line"
+        initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }} transition={{ delay: .9 + i * .45, duration: .6 }} />)}
+      {MAP_STARS.map(([x, y], i) => <motion.g key={i} initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} transition={{ delay: .5 + i * .45, type: 'spring', stiffness: 380, damping: 11 }}>
+        <circle cx={x} cy={y} r="11" className="obs-map-halo" />
+        <path transform={`translate(${x} ${y})`} className="obs-map-star" d="M0-7 1.9-1.9 7 0 1.9 1.9 0 7-1.9 1.9-7 0-1.9-1.9z" />
+        <text x={x} y={y + 24} className="obs-map-label">{ANSWERS[i]}</text>
+      </motion.g>)}
+      {['A', 'B'].filter(r => bonus[r]).map(r => { const [x, y] = BONUS_STARS[r]; return <motion.g key={r} initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 300, damping: 10 }}>
+        <circle cx={x} cy={y} r="4" className="obs-map-bonus" />
+        <text x={x} y={y - 9} className="obs-map-caption">{bonus[r].length > 26 ? `${bonus[r].slice(0, 25)}…` : bonus[r]}</text>
+      </motion.g>; })}
+      <path className="obs-map-comet" d="M-20 30 Q160 -10 360 40" />
+    </svg>
+  </div>;
+}
+
+function SignalFromHome({ bonus, onSend }) {
+  const { me, otherName } = useClub();
+  const [open, setOpen] = useState(false);
+  const [text, setText] = useState('');
+  const sent = me && bonus[me];
+  if (!open) return <Button kind="soft" onClick={() => setOpen(true)}><Sparkle size={16} weight="duotone" /> Bonus round · signal from home</Button>;
+  return <motion.div className="obs-bonus" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ type: 'spring', stiffness: 220, damping: 22 }}>
+    <h3>Signal from <em>home</em></h3>
+    <p>Each pick one photo from your camera roll that feels like a night in this observatory. Show it on the call without a word. {otherName} gets 90 seconds to guess the story, then you tell the real one.</p>
+    {sent ? <p className="obs-bonus-sent">Your story is up there now, a new star on the map.</p>
+      : <form className="obs-bonus-form" onSubmit={e => { e.preventDefault(); if (text.trim()) onSend(text.trim()); }}>
+        <input value={text} onChange={e => setText(e.target.value)} placeholder="The real story, in one line" maxLength={80} aria-label="The real story, in one line" />
+        <Button type="submit" disabled={!text.trim()}><PaperPlaneTilt size={16} weight="duotone" /> Send to the sky</Button>
+      </form>}
+  </motion.div>;
+}
+
+export function progress(data = {}) {
+  const done = new Set((data.completed || []).filter(i => i >= 0 && i < 5)).size;
+  return { done, total: 5, finished: !!data.finished };
+}
+
+export default function Observatory({ data, update }) {
+  const { me, nameOf } = useClub();
+  const [state, patch] = usePatch(data, update, INITIAL);
+  const [opening, setOpening] = useState(null);
+  const timer = useRef(null);
+  useEffect(() => () => clearTimeout(timer.current), []);
+  const completed = useMemo(() => [...new Set(state.completed || [])], [state.completed]);
+  const reachable = Math.min(4, completed.length ? Math.max(...completed) + 1 : 0);
+  const index = Math.max(0, Math.min(state.step || 0, reachable));
+  const lock = LOCKS[index];
+  const solved = completed.includes(index) || opening === index;
+  const switches = { ...INITIAL.switches, ...(state.switches || {}) };
+
+  const solve = i => {
+    if (opening !== null) return;
+    setOpening(i);
+    timer.current = setTimeout(() => {
+      setOpening(null);
+      patch(old => ({ ...old, completed: [...new Set([...(old.completed || []), i])], step: Math.min(4, i + 1), finished: i === 4 || old.finished }));
+    }, 1300);
+  };
+  const replay = () => { clearTimeout(timer.current); setOpening(null); patch({ ...INITIAL }); };
+  const role = !lock.owner ? 'Shared clue' : me === lock.owner ? 'You navigate' : `${nameOf(lock.owner)} navigates`;
+
+  const boards = [
+    <StarChart key="0" />,
+    <MirrorReceiver key="1" />,
+    <Switchboard key="2" switches={switches} onFlip={k => patch(old => ({ ...old, switches: { ...INITIAL.switches, ...old.switches, [k]: !old.switches?.[k] } }))} />,
+    <CipherWheel key="3" />,
+    <Vault key="4" onSolve={() => solve(4)} />,
+  ];
+
+  return <GameShell title="The Observatory Lock" number="Game 03" tone="blue" backdrop="stars" rules={<GameRules steps={RULES} audioSrc="/audio/rules/observatory.mp3" />}>
+    {state.finished ? <Finale eyebrow="The archive opens at 23:59" title={<>You unlocked the <em>star map</em></>} onReplay={replay} replayLabel="Reset all five locks and play again">
+      <p>You found the orbit, caught the comet, and sent them both home. This patch of sky is yours to keep.</p>
+      <StarMap bonus={state.bonus || {}} />
+      <SignalFromHome bonus={state.bonus || {}} onSend={text => patch(old => ({ ...old, bonus: { ...(old.bonus || {}), [me || 'A']: text } }))} />
+    </Finale> : <>
+      <RoundProgress rounds={LOCKS.map((l, i) => ({ id: i, label: l.label }))} current={index} done={completed} rewards={Object.fromEntries(completed.map(i => [i, ANSWERS[i]]))} onSelect={i => i <= reachable && patch({ step: i })} />
+      <Round id={`lock-${index}`} className="obs-round" eyebrow={`Lock 0${index + 1} · ${role}`} title={lock.title} intro={lock.intro}>
+        <Sky />
+        <div className="obs-stage">
+          {boards[index]}
+          <AnimatePresence>{opening === index && <Unlocked lock={index} />}</AnimatePresence>
+        </div>
+        {lock.owner
+          ? <PrivatePanel {...{ [lock.owner.toLowerCase()]: NOTES[index] }} title="Navigator note" />
+          : <PrivatePanel a={NOTES[4].a} b={NOTES[4].b} title="Your half" />}
+        {lock.accept && <AnswerLock accept={lock.accept} onSolve={() => solve(index)} placeholder={lock.placeholder} label="Open the lock" solved={solved} solvedText={`Opened with ${ANSWERS[index]}`} />}
+        {!solved && <HintLadder hints={lock.hints} level={state.hints?.[index] || 0} onLevel={n => patch(old => ({ ...old, hints: { ...(old.hints || {}), [index]: n } }))} onReveal={() => solve(index)} revealLabel="Reveal and open the lock" />}
+        <HowItWorks>{lock.how}</HowItWorks>
+      </Round>
+    </>}
+  </GameShell>;
 }

@@ -1,0 +1,173 @@
+.w-protocol-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  isolation: isolate;
+}
+
+.w-protocol-depth {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+}
+
+.w-protocol-depth-far { z-index: 0; }
+.w-protocol-depth-mid { z-index: 1; }
+.w-protocol-depth-near { z-index: 2; }
+
+.w-protocol-window-wash {
+  position: absolute;
+  top: -8%;
+  width: 31vw;
+  height: 62vh;
+  opacity: .13;
+  background: linear-gradient(125deg, transparent 12%, rgba(255, 225, 175, .2) 47%, transparent 84%);
+}
+
+.w-protocol-window-wash-left {
+  left: -12%;
+  transform: rotate(12deg);
+}
+
+.w-protocol-window-wash-right {
+  right: -13%;
+  transform: rotate(-13deg);
+}
+
+.w-protocol-dust-field { position: absolute; inset: 0; }
+
+.w-protocol-mote {
+  position: absolute;
+  display: block;
+  width: var(--mote-size);
+  height: var(--mote-size);
+  border-radius: 50%;
+  background: #f9e6bd;
+  box-shadow: 0 0 9px rgba(255, 225, 174, .66);
+  opacity: .28;
+  animation: w-protocol-drift var(--mote-duration) ease-in-out var(--mote-delay) infinite;
+}
+
+.w-protocol-flight-route {
+  position: absolute;
+  left: 1%;
+  top: 7vh;
+  width: 98%;
+  height: clamp(125px, 20vh, 230px);
+  overflow: visible;
+}
+
+.w-protocol-route-shadow,
+.w-protocol-route-line {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.w-protocol-route-shadow {
+  stroke: rgba(59, 31, 31, .4);
+  stroke-width: 4;
+  stroke-dasharray: 1 15;
+}
+
+.w-protocol-route-line {
+  stroke: rgba(219, 166, 144, .72);
+  stroke-width: 2;
+  stroke-dasharray: 1 15;
+}
+
+.w-protocol-route-pin {
+  fill: rgba(236, 210, 177, .56);
+  stroke: rgba(126, 51, 58, .72);
+  stroke-width: 2;
+}
+
+.w-protocol-route-pin-core { fill: #b94b5c; }
+
+.w-protocol-plane {
+  position: absolute;
+  top: 20.5vh;
+  left: 3%;
+  width: 34px;
+  height: 28px;
+  filter: drop-shadow(0 2px 4px rgba(24, 16, 15, .65));
+}
+
+.w-protocol-plane svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.w-protocol-plane path:first-child { fill: #f3e0bf; stroke: #713c3c; stroke-width: 1.3; stroke-linejoin: round; }
+.w-protocol-plane path:last-child { fill: none; stroke: #b55261; stroke-width: 1.1; stroke-linecap: round; }
+
+.w-protocol-stamp-arrival {
+  position: absolute;
+  width: clamp(66px, 8vw, 116px);
+  opacity: .68;
+}
+
+.w-protocol-stamp-arrival-left { left: 2.8%; bottom: 14%; }
+.w-protocol-stamp-arrival-right { right: 2.8%; top: 29%; }
+
+.w-protocol-postmark { display: block; width: 100%; overflow: visible; }
+.w-protocol-postmark-left { transform-origin: 50% 50%; animation: w-protocol-flutter 13s ease-in-out -5s infinite; }
+.w-protocol-postmark-right { transform-origin: 50% 50%; animation: w-protocol-flutter 16s ease-in-out -9s infinite reverse; }
+.w-protocol-stamp-paper { fill: rgba(246, 226, 194, .2); stroke: rgba(244, 217, 177, .72); stroke-width: 2; }
+.w-protocol-stamp-edge { fill: none; stroke: rgba(180, 73, 85, .78); stroke-width: 2; stroke-dasharray: 2 5; }
+.w-protocol-stamp-orbit { fill: none; stroke: rgba(239, 211, 176, .68); stroke-width: 1.5; }
+.w-protocol-stamp-flower { fill: rgba(190, 72, 91, .62); stroke: rgba(242, 211, 185, .5); stroke-width: 1; }
+.w-protocol-stamp-center { fill: #e8c691; }
+
+.w-protocol-seal-glimmer {
+  position: absolute;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 232, 187, .68), rgba(221, 164, 110, .09) 70%, transparent);
+  animation: w-protocol-glimmer 5.4s ease-in-out infinite;
+}
+
+.w-protocol-seal-glimmer-left { left: 13%; bottom: 22%; }
+.w-protocol-seal-glimmer-right { right: 13%; bottom: 18%; animation-delay: -2.7s; }
+
+@keyframes w-protocol-drift {
+  0%, 100% { opacity: .14; transform: translate3d(0, 8px, 0) scale(.74); }
+  48% { opacity: .68; transform: translate3d(3px, var(--mote-drift), 0) scale(1); }
+}
+
+@keyframes w-protocol-flutter {
+  0%, 100% { transform: rotate(-1.3deg); }
+  50% { transform: rotate(1.1deg); }
+}
+
+@keyframes w-protocol-glimmer {
+  0%, 100% { opacity: .18; transform: scale(.72); }
+  50% { opacity: .72; transform: scale(1.12); }
+}
+
+.w-protocol-is-static .w-protocol-mote,
+.w-protocol-is-static .w-protocol-postmark,
+.w-protocol-is-static .w-protocol-seal-glimmer {
+  animation: none;
+}
+
+.w-protocol-is-static .w-protocol-mote { opacity: .35; transform: none; }
+.w-protocol-is-static .w-protocol-postmark { transform: none; }
+.w-protocol-is-static .w-protocol-seal-glimmer { opacity: .4; transform: none; }
+
+@media (orientation: portrait) {
+  .w-protocol-window-wash { width: 54vw; height: 38vh; }
+  .w-protocol-flight-route { top: 7vh; height: clamp(130px, 15vh, 230px); }
+  .w-protocol-plane { top: 15.6vh; width: 29px; height: 24px; }
+  .w-protocol-stamp-arrival { width: clamp(62px, 13vw, 104px); }
+  .w-protocol-stamp-arrival-left { left: 1.4%; bottom: 18%; }
+  .w-protocol-stamp-arrival-right { right: 1.2%; top: 22%; }
+  .w-protocol-seal-glimmer-left { left: 15%; bottom: 25%; }
+  .w-protocol-seal-glimmer-right { right: 14%; bottom: 22%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-protocol-mote,
+  .w-protocol-postmark,
+  .w-protocol-seal-glimmer {
+    animation: none;
+  }
+}

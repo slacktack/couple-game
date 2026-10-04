@@ -1,0 +1,227 @@
+.w-musicbox-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  color: var(--tone, #f0b45c);
+}
+
+.w-musicbox-layer::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 50% 42%, transparent 44%, rgba(14, 8, 4, .2) 100%);
+}
+
+.w-musicbox-parallax,
+.w-musicbox-entry {
+  position: absolute;
+  inset: 0;
+}
+
+.w-musicbox-gear-system {
+  position: absolute;
+  top: -8%;
+  left: -5%;
+  width: clamp(360px, 40vw, 620px);
+  aspect-ratio: 4 / 3;
+}
+
+.w-musicbox-gear-large,
+.w-musicbox-gear-small {
+  position: absolute;
+  aspect-ratio: 1;
+  filter: drop-shadow(0 2px 7px rgba(7, 4, 2, .52));
+}
+
+.w-musicbox-gear-large {
+  top: 14.9%;
+  left: 4.8%;
+  width: 52.7%;
+  animation: w-musicbox-turn-clockwise 180s linear infinite;
+}
+
+.w-musicbox-gear-small {
+  top: 28%;
+  left: 50.9%;
+  width: 26.35%;
+  animation: w-musicbox-turn-counter 180s linear infinite;
+}
+
+.w-musicbox-gear-large svg,
+.w-musicbox-gear-small svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.w-musicbox-gear-metal {
+  fill: rgba(53, 34, 20, .69);
+  stroke: rgba(224, 177, 100, .48);
+  stroke-width: 2.2;
+  stroke-linejoin: bevel;
+}
+
+.w-musicbox-gear-ring,
+.w-musicbox-gear-spokes {
+  fill: none;
+  stroke: rgba(236, 190, 117, .4);
+  stroke-width: 1.7;
+}
+
+.w-musicbox-gear-spokes {
+  stroke: rgba(213, 161, 82, .5);
+  stroke-width: 3.2;
+}
+
+.w-musicbox-gear-hub {
+  fill: rgba(35, 23, 14, .9);
+  stroke: rgba(238, 190, 111, .62);
+  stroke-width: 3;
+}
+
+.w-musicbox-gear-pin {
+  fill: rgba(244, 199, 123, .72);
+}
+
+.w-musicbox-lamp-glow {
+  position: absolute;
+  top: -11%;
+  right: -6%;
+  width: min(46vw, 680px);
+  height: min(55vh, 560px);
+  opacity: .48;
+  background: radial-gradient(ellipse at 68% 28%, rgba(243, 175, 81, .24), rgba(183, 107, 35, .08) 35%, transparent 72%);
+  animation: w-musicbox-lamp-breathe 7.5s ease-in-out infinite alternate;
+}
+
+.w-musicbox-pendulum {
+  position: absolute;
+  top: 3%;
+  right: 19%;
+  width: 26px;
+  height: clamp(180px, 34vh, 360px);
+  transform-origin: 50% 0;
+  animation: w-musicbox-pendulum-sway 5.6s ease-in-out infinite alternate;
+}
+
+.w-musicbox-pendulum::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 15px;
+  left: 50%;
+  width: 1px;
+  transform: translateX(-50%);
+  background: linear-gradient(180deg, rgba(214, 170, 99, .08), rgba(214, 170, 99, .38));
+  box-shadow: 0 0 5px rgba(233, 177, 94, .2);
+}
+
+.w-musicbox-pendulum span {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  width: 18px;
+  height: 18px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(235, 188, 111, .68);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d4a85f, #543619 70%);
+  box-shadow: 0 0 12px rgba(226, 164, 76, .23);
+}
+
+.w-musicbox-note {
+  position: absolute;
+  width: var(--note-size);
+  aspect-ratio: 3 / 4;
+  color: rgba(248, 198, 111, .76);
+  opacity: 0;
+  animation: w-musicbox-note-rise 18s ease-in-out var(--note-delay) infinite;
+}
+
+.w-musicbox-note svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+  filter: drop-shadow(0 0 6px rgba(244, 178, 83, .28));
+}
+
+.w-musicbox-dust {
+  position: absolute;
+  width: var(--dust-size);
+  height: var(--dust-size);
+  border-radius: 50%;
+  background: rgba(255, 214, 143, .78);
+  box-shadow: 0 0 7px rgba(248, 182, 88, .58);
+  opacity: 0;
+  animation: w-musicbox-dust-rise var(--dust-duration) ease-in-out var(--dust-delay) infinite;
+}
+
+.w-musicbox-is-static * {
+  animation: none !important;
+}
+
+@keyframes w-musicbox-turn-clockwise {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes w-musicbox-turn-counter {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(-720deg); }
+}
+
+@keyframes w-musicbox-lamp-breathe {
+  from { opacity: .4; }
+  to { opacity: .65; }
+}
+
+@keyframes w-musicbox-pendulum-sway {
+  from { transform: rotate(-1.8deg); }
+  to { transform: rotate(1.8deg); }
+}
+
+@keyframes w-musicbox-note-rise {
+  0%, 100% { opacity: 0; transform: translate3d(0, 12px, 0) rotate(-6deg); }
+  20%, 70% { opacity: .7; }
+  55% { transform: translate3d(5px, -22px, 0) rotate(3deg); }
+  90% { opacity: .25; transform: translate3d(-3px, -44px, 0) rotate(7deg); }
+}
+
+@keyframes w-musicbox-dust-rise {
+  0%, 100% { opacity: 0; transform: translate3d(0, 0, 0) scale(.55); }
+  20%, 72% { opacity: .72; }
+  55% { transform: translate3d(3px, var(--dust-lift), 0) scale(.8); }
+  88% { opacity: .2; transform: translate3d(-2px, -50px, 0) scale(.65); }
+}
+
+@media (max-width: 700px) and (orientation: portrait) {
+  .w-musicbox-gear-system {
+    top: 2%;
+    left: -32%;
+    width: min(82vw, 420px);
+  }
+
+  .w-musicbox-lamp-glow {
+    top: -4%;
+    right: -18%;
+    width: 78vw;
+    height: 42vh;
+  }
+
+  .w-musicbox-pendulum {
+    top: 12%;
+    right: 8%;
+    height: 21vh;
+  }
+
+  .w-musicbox-note:nth-child(2) {
+    top: 66% !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .w-musicbox-layer * {
+    animation: none !important;
+  }
+}

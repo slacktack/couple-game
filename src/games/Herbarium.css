@@ -1,0 +1,147 @@
+/* Shared paper for the plate and the key */
+.herb-plate, .herb-ledger {
+  position: relative; overflow: hidden; isolation: isolate;
+  padding: 16px clamp(10px, 3vw, 22px) 22px; border-radius: 6px 6px 16px 16px;
+  background:
+    radial-gradient(circle at 12% 8%, color-mix(in srgb, #fff 55%, transparent), transparent 45%),
+    radial-gradient(circle at 90% 95%, color-mix(in srgb, var(--line-strong) 30%, transparent), transparent 50%),
+    repeating-linear-gradient(97deg, transparent 0 3px, color-mix(in srgb, var(--line) 22%, transparent) 3px 4px),
+    var(--surface);
+  box-shadow: var(--shadow-2), inset 0 0 0 1px var(--line), inset 0 0 46px color-mix(in srgb, var(--line-strong) 38%, transparent);
+}
+.herb-plate { transform: rotate(-.35deg); }
+.herb-head { position: relative; z-index: 1; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-bottom: 10px; margin-bottom: 8px; border-bottom: 1px dashed var(--line-strong); }
+.herb-hand { font: 500 11px var(--mono); color: var(--ink-2); letter-spacing: .04em; white-space: nowrap; }
+
+/* Specimens */
+.herb-specimens { position: relative; z-index: 1; display: grid; grid-template-columns: repeat(auto-fill, minmax(88px, 1fr)); gap: 4px 2px; }
+.herb-specimen {
+  position: relative; display: grid; justify-items: center; gap: 2px; padding: 6px 2px 4px; min-height: 44px;
+  border: 0; border-radius: var(--r-md); background: transparent; color: var(--ink-3);
+  -webkit-tap-highlight-color: transparent; transition: background-color .35s var(--ease);
+}
+.herb-specimen::before { content: ''; position: absolute; inset: 4px 10% 26px; border-radius: 50%; background: radial-gradient(circle at 50% 30%, var(--tone-soft), transparent 70%); opacity: 0; transform: scale(.6); transition: opacity .3s, transform .45s var(--spring); }
+.herb-specimen.is-pressed::before { opacity: 1; transform: none; }
+.herb-specimen.is-pressed .herb-no { color: var(--tone); font-weight: 500; }
+.herb-specimen.is-pressed .herb-flower { filter: drop-shadow(0 2px 0 color-mix(in srgb, var(--tone) 35%, transparent)); }
+.herb-specimen.is-glow { background: var(--tone-soft); box-shadow: 0 0 0 2px var(--tone); animation: herb-glow 1.6s ease-in-out infinite alternate; }
+.herb-flower { position: relative; width: 100%; max-width: 92px; height: auto; overflow: visible; }
+.herb-no { font: 400 10.5px var(--mono); letter-spacing: .06em; transition: color .3s; }
+.herb-tape {
+  position: absolute; left: 50%; bottom: calc(18px + 14%); width: 36px; height: 12px; pointer-events: none;
+  background: color-mix(in srgb, var(--surface-3) 75%, transparent); border-left: 1px dashed var(--line-strong); border-right: 1px dashed var(--line-strong);
+  box-shadow: 0 1px 2px color-mix(in srgb, var(--ink) 12%, transparent); transform: translateX(-50%) rotate(-7deg);
+}
+.herb-specimen:nth-child(even) .herb-tape { transform: translateX(-50%) rotate(6deg); }
+
+/* Flower art */
+.herb-stem, .herb-tendril { fill: none; stroke: #5b7a3c; stroke-linecap: round; stroke-dasharray: 1; stroke-dashoffset: 1; animation: herb-draw .7s var(--ease) var(--d, 0ms) forwards; }
+.herb-stem { stroke-width: 2.6; }
+.herb-tendril { stroke-width: 1.9; animation-delay: calc(var(--d, 0ms) + 260ms); }
+.herb-leaf { fill: #7c9f58; stroke: #47652f; stroke-width: .9; stroke-linejoin: round; transform-origin: 0 0; animation: herb-leaf .6s var(--spring) calc(var(--d, 0ms) + 220ms) both; }
+.herb-petal { stroke-width: 1.1; transform-origin: 50px 42px; animation: herb-unfurl .8s var(--spring) calc(var(--d, 0ms) + 380ms + var(--i, 0) * 50ms) both; }
+.herb-eye { transform-origin: 50px 42px; animation: herb-unfurl .5s var(--spring) calc(var(--d, 0ms) + 360ms) both; }
+.herb-sway { transform-origin: 50px 136px; animation: herb-sway 4.6s ease-in-out calc(var(--d, 0ms) * -3) infinite alternate; }
+.herb-specimen:nth-child(3n) .herb-sway { animation-duration: 5.8s; }
+@keyframes herb-draw { to { stroke-dashoffset: 0; } }
+@keyframes herb-leaf { from { transform: scale(0) rotate(30deg); } }
+@keyframes herb-unfurl { from { transform: scale(0) rotate(-50deg); opacity: 0; } }
+@keyframes herb-sway { from { transform: rotate(-2.4deg); } to { transform: rotate(2.4deg); } }
+@keyframes herb-glow { to { box-shadow: 0 0 0 5px color-mix(in srgb, var(--tone) 35%, transparent); } }
+
+/* Falling petals */
+.herb-fall { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+.herb-fall i { position: absolute; top: -24px; width: 9px; height: 13px; border-radius: 60% 40% 60% 40%; background: var(--c); opacity: .45; animation: herb-fall 14s linear infinite both; }
+@keyframes herb-fall {
+  0% { transform: translate(0, 0) rotate(0); }
+  50% { transform: translate(26px, 600px) rotate(220deg); }
+  100% { transform: translate(-10px, 1300px) rotate(460deg); }
+}
+
+/* Wax seal */
+.herb-seal {
+  position: absolute; z-index: 2; top: 8px; right: 10px; display: grid; place-items: center; width: 66px; height: 66px; border-radius: 47% 53% 50% 50%;
+  font: 500 11px var(--mono); letter-spacing: .2em; text-transform: uppercase; color: #fbeee6;
+  background: radial-gradient(circle at 35% 30%, #d86a7e, #a23149 55%, #7d2034);
+  box-shadow: 0 4px 10px rgba(90, 20, 35, .35), inset 0 0 0 5px rgba(255, 255, 255, .12);
+}
+
+/* The key */
+.herb-ledger {
+  background:
+    linear-gradient(90deg, transparent 0 calc(clamp(10px, 3vw, 22px) + 58px), color-mix(in srgb, #c2475f 35%, transparent) 0 calc(clamp(10px, 3vw, 22px) + 59px), transparent 0),
+    repeating-linear-gradient(180deg, transparent 0 49px, color-mix(in srgb, #5c87da 20%, transparent) 49px 50px),
+    var(--surface);
+}
+.herb-grid { position: relative; z-index: 1; display: grid; grid-template-columns: 58px repeat(5, minmax(0, 1fr)); gap: 2px 2px; align-items: center; }
+.herb-corner { font-size: 10px; align-self: end; padding-bottom: 6px; }
+.herb-colhead { display: grid; justify-items: center; gap: 2px; padding-bottom: 4px; color: var(--ink-2); }
+.herb-colhead svg { width: 22px; height: 22px; fill: color-mix(in srgb, var(--ink-3) 55%, transparent); stroke: var(--ink-3); stroke-width: 1.5; }
+.herb-colhead b { font: 500 11px var(--mono); }
+.herb-rowhead { display: flex; align-items: center; gap: 4px; min-width: 0; }
+.herb-rowhead i { flex: none; width: 10px; height: 15px; border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%; border: 1.5px solid; transform: rotate(-18deg); }
+.herb-rowhead b { font: 500 11px var(--mono); color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; }
+.herb-cell {
+  display: grid; place-items: center; min-height: 48px; padding: 0; border: 0; border-radius: 12px; background: transparent;
+  font: 700 23px/1 var(--display); letter-spacing: -.02em; color: var(--ink);
+  -webkit-tap-highlight-color: transparent; transition: background-color .25s, color .25s;
+}
+.herb-cell.is-marked { background: var(--tone-soft); color: var(--tone); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--tone) 50%, transparent); }
+.herb-cell.is-lit { color: var(--tone); text-shadow: 0 0 14px color-mix(in srgb, var(--tone) 45%, transparent); }
+.herb-gap { font: 500 9.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); border-bottom: 1.5px solid var(--ink-3); padding: 0 2px 2px; }
+.herb-sprig { width: 22px; height: 22px; fill: none; stroke: #6f8a54; stroke-width: 1.6; stroke-linecap: round; opacity: .8; }
+.herb-slip {
+  position: relative; z-index: 1; display: flex; align-items: center; gap: 12px; margin: 14px 4px 0; padding: 12px 14px;
+  border-radius: 4px; background: color-mix(in srgb, var(--amber) 12%, var(--surface)); color: var(--ink-2); font-size: 14px; line-height: 1.45;
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--ink) 12%, transparent);
+}
+.herb-slip::before { content: ''; position: absolute; top: -7px; left: 50%; width: 46px; height: 14px; transform: translateX(-50%) rotate(-3deg); background: color-mix(in srgb, var(--surface-3) 80%, transparent); }
+.herb-slip svg { flex: none; width: 40px; overflow: visible; }
+.herb-slip .herb-leaf { animation: none; }
+.herb-slip b { color: var(--ink); }
+
+/* Ink strip doubles as the answer field */
+.herb-lock { position: relative; }
+.herb-lock .answer-lock { display: grid; grid-template-columns: 1fr; gap: 10px; }
+.herb-lock .answer-lock input, .herb-ink {
+  font: 500 19px var(--mono); letter-spacing: .1em; padding: 0 16px;
+}
+.herb-lock .answer-lock input {
+  height: 58px; min-height: 58px; color: transparent; caret-color: var(--ink); border-radius: 8px;
+  background: linear-gradient(180deg, transparent 0 74%, color-mix(in srgb, var(--line-strong) 60%, transparent) 74% calc(74% + 1px), transparent 0), var(--surface-2);
+}
+.herb-lock .answer-lock input::selection { color: transparent; }
+.herb-lock .answer-lock .btn { width: 100%; }
+.herb-ink-over { position: absolute; top: 0; left: 0; right: 0; height: 58px; pointer-events: none; }
+.herb-ink-over > .herb-ink { height: 100%; border: 1.5px solid transparent; overflow: hidden; }
+.herb-lock.is-long .answer-lock input { color: var(--ink); }
+.herb-lock.is-long > .herb-ink-over { display: none; }
+.herb-ink { display: flex; align-items: center; white-space: pre; color: var(--ink); }
+.herb-ink span { display: inline-block; }
+.herb-ink .is-heart { color: var(--tone); }
+.herb-ink.is-done {
+  flex-wrap: wrap; justify-content: center; gap: 0 2px; min-height: 64px; padding: 14px 26px;
+  font: 700 clamp(22px, 6vw, 30px)/1.15 var(--display); letter-spacing: -.02em; white-space: normal; color: var(--ink);
+  background: linear-gradient(180deg, var(--surface-2), var(--surface-3));
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%, 14px 50%);
+}
+
+/* Finale letter */
+.herb-letter {
+  width: min(420px, 100%); display: grid; gap: 6px; padding: 26px 24px 22px; text-align: left; border-radius: 4px;
+  background: repeating-linear-gradient(180deg, transparent 0 35px, color-mix(in srgb, #5c87da 16%, transparent) 35px 36px), var(--surface);
+  box-shadow: var(--shadow-2); transform: rotate(-1deg);
+}
+.herb-letter p { font: 650 clamp(20px, 5vw, 25px)/1.4 var(--display); letter-spacing: -.035em; color: var(--ink); }
+.herb-letter b { justify-self: end; font: 700 clamp(40px, 11vw, 58px)/1 var(--display); letter-spacing: -.06em; color: var(--tone); }
+
+/* Press your own */
+.herb-press { width: min(460px, 100%); display: grid; gap: 12px; justify-items: stretch; margin-top: 10px; padding-top: 20px; border-top: 1px dashed var(--line-strong); }
+.herb-press h3 { font-size: clamp(24px, 6vw, 30px); }
+.herb-press-field { display: flex; gap: 8px; }
+.herb-press-field input { min-height: 50px; font: 500 16px var(--mono); letter-spacing: .08em; text-transform: uppercase; }
+.herb-heart-key { flex: none; display: grid; place-items: center; width: 50px; height: 50px; border-radius: 50%; border: 1.5px solid var(--line); background: var(--surface); color: var(--tone); }
+.herb-mini { display: flex; flex-wrap: wrap; justify-content: center; min-height: 52px; gap: 0; }
+.herb-mini > span { width: 34px; }
+.herb-mini .herb-flower { max-width: 34px; }
+.herb-press .btn { justify-self: center; }

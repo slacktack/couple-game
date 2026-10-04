@@ -1,0 +1,93 @@
+@import '@fontsource-variable/outfit';
+@import '@fontsource/dm-mono/400.css';
+@import '@fontsource/dm-mono/500.css';
+
+:root {
+  --sans: 'Outfit Variable', 'Avenir Next', system-ui, sans-serif;
+  --display: 'Outfit Variable', 'Avenir Next', system-ui, sans-serif;
+  --mono: 'DM Mono', ui-monospace, monospace;
+
+  --bg: #fff8f8;
+  --bg-deep: #fae3e6;
+  --surface: #fffdfd;
+  --surface-2: #fbf1f3;
+  --surface-3: #f5e5ea;
+  --line: #eee3e7;
+  --line-strong: #dbbac6;
+  --ink: #302434;
+  --ink-2: #716575;
+  --ink-3: #8a7e89;
+  --on-accent: #fff;
+
+  --rose: #ca4f6c;
+  --rose-soft: #fae9ed;
+  --lilac: #8a63a6;
+  --lilac-soft: #ede2f4;
+  --blue: #2f7f93;
+  --blue-soft: #dcedf2;
+  --amber: #b9752a;
+  --amber-soft: #f7e6cf;
+  --moss: #3f8770;
+  --moss-soft: #dcefe6;
+  --indigo: #4b56a8;
+  --indigo-soft: #e1e3f6;
+  --sage: #6b8f4e;
+  --sage-soft: #e6f0dc;
+
+  --good: #3f8a5f;
+  --warn: #b5532f;
+
+  --r-sm: 10px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 34px;
+  --shadow-1: 0 1px 2px rgba(60, 30, 40, .06), 0 4px 14px rgba(60, 30, 40, .06);
+  --shadow-2: 0 2px 6px rgba(60, 30, 40, .07), 0 18px 44px rgba(60, 30, 40, .11);
+  --ease: cubic-bezier(.22, 1, .36, 1);
+  --spring: cubic-bezier(.34, 1.56, .64, 1);
+
+  color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+  --bg: #17141b;
+  --bg-deep: #0f0c13;
+  --surface: #211d27;
+  --surface-2: #282330;
+  --surface-3: #322939;
+  --line: #403744;
+  --line-strong: #52445b;
+  --ink: #eee6f0;
+  --ink-2: #cdbdc8;
+  --ink-3: #9d8b98;
+
+  --rose: #f28ca4;
+  --rose-soft: #43242f;
+  --lilac: #c4a0e0;
+  --lilac-soft: #33263f;
+  --blue: #72c6d9;
+  --blue-soft: #1d3138;
+  --amber: #f0b468;
+  --amber-soft: #3b2a17;
+  --moss: #7fd1b2;
+  --moss-soft: #183129;
+  --indigo: #a3abf2;
+  --indigo-soft: #23264a;
+  --sage: #b0d58f;
+  --sage-soft: #263220;
+  --good: #8bd6a8;
+  --warn: #f2a17f;
+
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, .3), 0 4px 14px rgba(0, 0, 0, .25);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, .3), 0 18px 44px rgba(0, 0, 0, .4);
+  color-scheme: dark;
+}
+
+/* Each game sets its tone once; kit components read --tone / --tone-soft. */
+.tone-rose { --tone: var(--rose); --tone-soft: var(--rose-soft); }
+.tone-lilac { --tone: var(--lilac); --tone-soft: var(--lilac-soft); }
+.tone-blue { --tone: var(--blue); --tone-soft: var(--blue-soft); }
+.tone-amber { --tone: var(--amber); --tone-soft: var(--amber-soft); }
+.tone-moss { --tone: var(--moss); --tone-soft: var(--moss-soft); }
+.tone-indigo { --tone: var(--indigo); --tone-soft: var(--indigo-soft); }
+.tone-sage { --tone: var(--sage); --tone-soft: var(--sage-soft); }
